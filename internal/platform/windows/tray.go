@@ -5,6 +5,7 @@ package windows
 import (
 	_ "embed"
 	"fmt"
+	"runtime"
 
 	"fyne.io/systray"
 )
@@ -16,10 +17,9 @@ var iconICO []byte
 type Tray struct {
 	onAdd, onSignIn, onSignOut, onOpenConfig, onQuit func()
 	mAdd, mSignIn, mSignOut, mConfig, mQuit          *systray.MenuItem
-	end                                              func()
 }
 
-// NewTray returns a Tray; call Run to show it.
+// NewTray returns a Tray; call Start to show it.
 func NewTray() *Tray { return &Tray{} }
 
 func (t *Tray) OnAdd(f func())        { t.onAdd = f }
@@ -28,35 +28,36 @@ func (t *Tray) OnSignOut(f func())    { t.onSignOut = f }
 func (t *Tray) OnOpenConfig(f func()) { t.onOpenConfig = f }
 func (t *Tray) OnQuit(f func())       { t.onQuit = f }
 
-// Start registers the icon with systray's external-loop mode, which is what
-// Wails' own message loop needs, and shows it.
+// Start shows the icon on a dedicated, locked OS thread. Windows delivers a
+// window's messages only to the thread that created it, so the tray window
+// has to be created and pumped by the same thread; running it on Wails'
+// thread (or with systray's external-loop mode, which pumps from a different
+// goroutine) leaves the icon deaf to clicks.
 func (t *Tray) Start(onReady func()) {
-	start, end := systray.RunWithExternalLoop(func() {
-		systray.SetIcon(iconICO)
-		systray.SetTitle("pagotask")
-		systray.SetTooltip("pagotask")
-		t.mAdd = systray.AddMenuItem("Add task", "Open the capture popup")
-		systray.AddSeparator()
-		t.mSignIn = systray.AddMenuItem("Sign in to Google", "")
-		t.mSignOut = systray.AddMenuItem("Sign out", "")
-		t.mConfig = systray.AddMenuItem("Open config.yaml", "")
-		systray.AddSeparator()
-		t.mQuit = systray.AddMenuItem("Quit", "")
-		go t.loop()
-		if onReady != nil {
-			onReady()
-		}
-	}, nil)
-	t.end = end
-	start()
+	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		systray.Run(func() {
+			systray.SetIcon(iconICO)
+			systray.SetTitle("pagotask")
+			systray.SetTooltip("pagotask")
+			t.mAdd = systray.AddMenuItem("Add task", "Open the capture popup")
+			systray.AddSeparator()
+			t.mSignIn = systray.AddMenuItem("Sign in to Google", "")
+			t.mSignOut = systray.AddMenuItem("Sign out", "")
+			t.mConfig = systray.AddMenuItem("Open config.yaml", "")
+			systray.AddSeparator()
+			t.mQuit = systray.AddMenuItem("Quit", "")
+			go t.loop()
+			if onReady != nil {
+				onReady()
+			}
+		}, nil)
+	}()
 }
 
-// Stop removes the icon.
-func (t *Tray) Stop() {
-	if t.end != nil {
-		t.end()
-	}
-}
+// Stop removes the icon and ends the tray thread.
+func (t *Tray) Stop() { systray.Quit() }
 
 func (t *Tray) loop() {
 	for {
