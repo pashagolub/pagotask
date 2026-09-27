@@ -16,7 +16,16 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - name: Cross-compile for Windows
-        run: GOOS=windows GOARCH=amd64 go build -tags desktop,production -ldflags "-H windowsgui" -o dist/pagotask.exe ./cmd/pagotask
+        # The Google OAuth desktop client is baked in from repository secrets
+        # when they are set; without them sign-in falls back to config.yaml.
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          pkg=github.com/pashagolub/pagotask/internal/gtasks
+          GOOS=windows GOARCH=amd64 go build -tags desktop,production \
+            -ldflags "-H windowsgui -X $pkg.DefaultClientID=$GOOGLE_CLIENT_ID -X $pkg.DefaultClientSecret=$GOOGLE_CLIENT_SECRET" \
+            -o dist/pagotask.exe ./cmd/pagotask
       - uses: actions/upload-artifact@v4
         with:
           name: pagotask-windows-amd64
