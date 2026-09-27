@@ -1,7 +1,10 @@
 // Package editor is the capture popup: one title line, list and due chips,
-// optional notes. The Windows build renders it with Wails (WebView2); other
-// platforms get a headless stand-in until they have a window backend.
+// optional notes. The Windows build renders it with Wails v3 (WebView2),
+// which also owns the tray icon; other platforms get a headless stand-in
+// until they have a window backend.
 package editor
+
+import "github.com/pashagolub/pagotask/internal/platform"
 
 // Draft is what the popup shows and returns. Tag is a tag id, List a list
 // key, Due a keyword such as "tod", "tom", "fri", "+3" or a date.
@@ -50,4 +53,6 @@ type Editor interface {
 	Open(d Draft)
 	// Quit ends Run.
 	Quit()
+	// Tray is the status icon, which lives in the same UI backend.
+	Tray() platform.Tray
 }

@@ -1,4 +1,15 @@
-// Popup logic. Backend calls go through window.go.editor.App (Wails bindings).
+// Popup logic. Backend calls go through the Wails v3 runtime, which the app
+// serves at /wails/runtime.js.
+import { Call, Events } from "/wails/runtime.js";
+
+const svc = "github.com/pashagolub/pagotask/internal/editor.App.";
+const api = {
+  Catalog: () => Call.ByName(svc + "Catalog"),
+  Current: () => Call.ByName(svc + "Current"),
+  Save: (d) => Call.ByName(svc + "Save", d),
+  Cancel: () => Call.ByName(svc + "Cancel"),
+};
+
 (function () {
   const $ = (id) => document.getElementById(id);
   const titleEl = $("title"), emojiEl = $("emoji"), listName = $("list-name"), dueEl = $("due");
@@ -9,7 +20,7 @@
   let tagByKey = {}, tagById = {}, listByKey = {};
   let pickerMode = null; // "list" while the list picker is open
 
-  const backend = () => (window.go && window.go.editor && window.go.editor.App) || null;
+  const backend = () => api;
 
   function index() {
     tagByKey = {}; tagById = {}; listByKey = {};
@@ -149,15 +160,14 @@
   emojiEl.onclick = () => openPicker("tag");
 
   async function init() {
-    const b = backend();
-    if (b) { catalog = await b.Catalog(); index(); render(); }
-    if (window.runtime && window.runtime.EventsOn) {
-      window.runtime.EventsOn("draft", async (d) => {
-        const b2 = backend();
-        if (b2) { catalog = await b2.Catalog(); index(); }
-        load(d);
-      });
-    }
+    Events.On("draft", async (ev) => {
+      catalog = await api.Catalog(); index();
+      load(ev.data);
+    });
+    catalog = await api.Catalog(); index(); render();
+    // A draft opened before this page finished loading is still waiting.
+    const d = await api.Current();
+    if (d) load(d);
   }
   init();
 })();

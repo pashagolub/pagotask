@@ -10,8 +10,8 @@ import (
 )
 
 // New returns the Windows implementations.
-func New() (platform.PageReader, platform.Hotkey, platform.Tray, gtasks.TokenStore) {
-	return NewReader(), NewHotkey(), NewTray(), CredStore{}
+func New() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
+	return NewReader(), NewHotkey(), CredStore{}
 }
 
 // OpenFile opens a file with its default application.

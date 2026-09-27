@@ -8,7 +8,7 @@ import (
 	pw "github.com/pashagolub/pagotask/internal/platform/windows"
 )
 
-func newPlatform() (platform.PageReader, platform.Hotkey, platform.Tray, gtasks.TokenStore) {
+func newPlatform() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 	return pw.New()
 }
 
