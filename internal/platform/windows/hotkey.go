@@ -6,6 +6,7 @@ package windows
 import (
 	"fmt"
 	"runtime"
+	"sync/atomic"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -33,8 +34,10 @@ const (
 	modNoRepeat = 0x4000
 	wmHotkey    = 0x0312
 	wmQuit      = 0x0012
-	hotkeyID    = 1
 )
+
+// nextID numbers hotkeys so several can be registered at once.
+var nextID atomic.Int32
 
 type msg struct {
 	hwnd    uintptr
@@ -48,6 +51,7 @@ type msg struct {
 // Hotkey registers a global shortcut with RegisterHotKey and pumps messages
 // on a locked OS thread.
 type Hotkey struct {
+	id       uintptr
 	threadID uint32
 	done     chan struct{}
 }
@@ -78,13 +82,16 @@ func (h *Hotkey) Register(combo string, fn func()) error {
 	if c.Key == "SPACE" {
 		vk = 0x20
 	}
+	if h.id == 0 {
+		h.id = uintptr(nextID.Add(1))
+	}
 	errCh := make(chan error, 1)
 	h.done = make(chan struct{})
 	go func() {
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
 		h.threadID = windows.GetCurrentThreadId()
-		r, _, e := procRegisterHotKey.Call(0, hotkeyID, mods, vk)
+		r, _, e := procRegisterHotKey.Call(0, h.id, mods, vk)
 		if r == 0 {
 			errCh <- fmt.Errorf("RegisterHotKey(%s): %v (is it taken by another app?)", combo, e)
 			return
@@ -96,11 +103,11 @@ func (h *Hotkey) Register(combo string, fn func()) error {
 			if r == 0 || int32(r) == -1 {
 				break
 			}
-			if m.message == wmHotkey && m.wParam == hotkeyID {
+			if m.message == wmHotkey && m.wParam == h.id {
 				fn()
 			}
 		}
-		procUnregisterHotKey.Call(0, hotkeyID)
+		procUnregisterHotKey.Call(0, h.id)
 		close(h.done)
 	}()
 	return <-errCh

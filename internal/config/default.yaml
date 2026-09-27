@@ -1,6 +1,7 @@
 # pagotask configuration. Edited by hand; changes apply live.
 
 hotkey: Win+Shift+T
+tasks_hotkey: Win+Shift+D   # open tasks: check them off
 default_list: p
 
 # Single-letter key -> Google Tasks list title (must match the list name in Google Tasks).

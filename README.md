@@ -2,6 +2,7 @@
 
 Fast keyboard capture of Google Tasks on Windows. One tray exe, one hotkey
 (`Win+Shift+T`), a popup prefilled from the page in front of you, Enter.
+A second hotkey (`Win+Shift+D`) lists your open tasks to check them off.
 
 Status: first working cut. Tray, hotkey, config, Google sign-in, offline
 queue, page reader and the popup editor are in; nothing is signed or packaged
@@ -12,6 +13,16 @@ yet.
 - type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
 - Ctrl+L list (one letter), Ctrl+T tag list filtered as you type, Ctrl+D due (`tod`, `tom`, `fri`, `+3`, `24.12`), Ctrl+N notes
 - Enter saves, Esc closes
+
+## Open tasks keys
+
+`Win+Shift+D` (or "Open tasks" in the tray menu) shows open tasks from the
+configured lists, due today or overdue, sorted by date. It opens instantly
+from a local copy that refreshes on open and every 5 minutes.
+
+- arrows move, Space checks or unchecks; a checked task stays struck through until the popup closes
+- typing filters: title text, and tag words match their emoji (`pr pgw`); while you type, Space separates words, after an arrow key it checks
+- Enter opens the first link in the task's notes, Tab switches between today and all open tasks, Esc closes
 
 ## Build
 
@@ -44,7 +55,8 @@ and rules (URL/title regexps that prefill tag, title and list).
 - `internal/rules` – capture → prefilled draft
 - `internal/dates` – `tod`, `tom`, `mon`, `+3` …
 - `internal/editor` – popup and tray icon, one Wails v3 app on Windows (headless elsewhere); `frontend/` is plain HTML/JS
-- `internal/queue` – on-disk outbox with retries
+- `internal/queue` – on-disk outbox with retries (new tasks, checks and unchecks)
+- `internal/opentasks` – local copy of open tasks and the rows the tasks popup shows
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
   Credential Manager) and `other/` (headless stand-in)

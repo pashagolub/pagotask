@@ -13,6 +13,9 @@ func TestDefaultParses(t *testing.T) {
 	if c.Hotkey != "Win+Shift+T" {
 		t.Errorf("hotkey = %q", c.Hotkey)
 	}
+	if c.TasksHotkey != "Win+Shift+D" {
+		t.Errorf("tasks hotkey = %q", c.TasksHotkey)
+	}
 	if len(c.Tags) != 23 {
 		t.Errorf("tags = %d, want 23", len(c.Tags))
 	}

@@ -5,16 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	"google.golang.org/api/tasks/v1"
 
 	"github.com/pashagolub/pagotask/internal/dates"
+	"github.com/pashagolub/pagotask/internal/opentasks"
 	"github.com/pashagolub/pagotask/internal/queue"
 )
 
-// Client creates tasks and resolves list titles to ids.
+// Client creates, fetches and checks off tasks, and resolves list titles to ids.
 type Client struct {
 	auth  *Auth
 	lists func() map[string]string // list key -> title, read live from config
@@ -92,16 +94,70 @@ func (c *Client) Send(ctx context.Context, it queue.Item) error {
 	if err != nil {
 		return err
 	}
-	t := &tasks.Task{Title: it.Title, Notes: it.Notes}
-	if !it.Due.IsZero() {
-		// The due date is the local calendar day. Converting local midnight
-		// to UTC first would give yesterday east of Greenwich.
-		t.Due = dates.RFC3339(it.Due)
+	switch it.Op {
+	case queue.OpCreate:
+		t := &tasks.Task{Title: it.Title, Notes: it.Notes}
+		if !it.Due.IsZero() {
+			// The due date is the local calendar day. Converting local midnight
+			// to UTC first would give yesterday east of Greenwich.
+			t.Due = dates.RFC3339(it.Due)
+		}
+		_, err = svc.Tasks.Insert(listID, t).Context(ctx).Do()
+	case queue.OpComplete:
+		_, err = svc.Tasks.Patch(listID, it.TaskID, &tasks.Task{Status: "completed"}).Context(ctx).Do()
+	case queue.OpReopen:
+		t := &tasks.Task{Status: "needsAction", NullFields: []string{"Completed"}}
+		_, err = svc.Tasks.Patch(listID, it.TaskID, t).Context(ctx).Do()
+	default:
+		return &queue.Permanent{Err: fmt.Errorf("unknown queue op %q", it.Op)}
 	}
-	_, err = svc.Tasks.Insert(listID, t).Context(ctx).Do()
 	var gerr *googleapi.Error
 	if errors.As(err, &gerr) && gerr.Code >= 400 && gerr.Code < 500 && gerr.Code != 401 && gerr.Code != 429 {
 		return &queue.Permanent{Err: err}
 	}
 	return err
+}
+
+// OpenTasks fetches the open (unchecked) tasks of every configured list.
+func (c *Client) OpenTasks(ctx context.Context) ([]opentasks.Task, error) {
+	svc, err := c.service(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []opentasks.Task
+	for key := range c.lists() {
+		listID, err := c.ListID(ctx, key)
+		if err != nil {
+			var perm *queue.Permanent
+			if errors.As(err, &perm) {
+				continue // a list in config that Google does not have: nothing to show
+			}
+			return nil, err
+		}
+		err = svc.Tasks.List(listID).ShowCompleted(false).ShowHidden(false).MaxResults(100).
+			Pages(ctx, func(p *tasks.Tasks) error {
+				for _, t := range p.Items {
+					out = append(out, openTask(key, t))
+				}
+				return nil
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func openTask(listKey string, t *tasks.Task) opentasks.Task {
+	o := opentasks.Task{ID: t.Id, ListKey: listKey, Title: t.Title, Notes: t.Notes, ParentID: t.Parent, Position: t.Position}
+	if len(t.Due) >= 10 {
+		o.Due = t.Due[:10]
+	}
+	o.Updated, _ = time.Parse(time.RFC3339, t.Updated)
+	links := make([]string, 0, len(t.Links))
+	for _, l := range t.Links {
+		links = append(links, l.Link)
+	}
+	o.Link = opentasks.FirstLink(t.Notes, links)
+	return o
 }

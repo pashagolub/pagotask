@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>pagotask: open tasks</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="tasks.css">
+</head>
+<body>
+  <main id="tasks-popup">
+    <div class="row head">
+      <input id="filter" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Filter: pr pgw   (tag words and title text)">
+      <span id="view" class="view" title="Tab: today or all open tasks">Today</span>
+    </div>
+    <ul id="rows" class="rows"></ul>
+    <div class="row foot">
+      <span id="note" class="error"></span>
+      <span class="spacer"></span>
+      <span class="hint">Space checks · Enter opens link · Tab today/all · Esc closes</span>
+    </div>
+  </main>
+  <script type="module" src="tasks.js"></script>
+</body>
+</html>

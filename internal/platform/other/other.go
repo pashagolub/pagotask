@@ -33,5 +33,8 @@ func New() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 	return reader{}, hotkey{}, gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
 }
 
+// NewHotkey returns another (unimplemented) hotkey.
+func NewHotkey() platform.Hotkey { return hotkey{} }
+
 // OpenFile opens a file with the desktop's default application.
 func OpenFile(path string) error { return exec.Command("xdg-open", path).Start() }

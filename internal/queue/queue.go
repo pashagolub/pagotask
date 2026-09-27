@@ -15,9 +15,19 @@ import (
 	"time"
 )
 
-// Item is one task waiting to be created.
+// Op says what an item does in Google Tasks.
+const (
+	OpCreate   = ""         // create a new task from Title, Notes, Due
+	OpComplete = "complete" // check off TaskID
+	OpReopen   = "reopen"   // uncheck TaskID
+)
+
+// Item is one change waiting to reach Google Tasks: a new task, or a check
+// or uncheck of an existing one.
 type Item struct {
 	ID       string    `json:"id"`
+	Op       string    `json:"op,omitempty"`
+	TaskID   string    `json:"task_id,omitempty"`
 	ListKey  string    `json:"list_key"`
 	Title    string    `json:"title"`
 	Notes    string    `json:"notes,omitempty"`
@@ -54,7 +64,8 @@ func Open(dir string) (*Queue, error) {
 	return &Queue{dir: dir, wake: make(chan struct{}, 1)}, nil
 }
 
-// Put writes the item durably and wakes the pusher.
+// Put writes the item durably and wakes the pusher. An item with the ID of
+// one still waiting replaces it.
 func (q *Queue) Put(it Item) error {
 	if it.ID == "" {
 		it.ID = fmt.Sprintf("%d", time.Now().UnixNano())
@@ -74,9 +85,28 @@ func (q *Queue) Put(it Item) error {
 
 func (q *Queue) path(id string) string { return filepath.Join(q.dir, id+".json") }
 
+// ToggleID is the item id for checking or unchecking a task, so a later
+// toggle of the same task replaces the one still waiting.
+func ToggleID(taskID string) string { return "toggle-" + taskID }
+
+// same reports whether the stored item is still the one drain picked up,
+// i.e. no newer Put replaced it meanwhile. Call with q.mu held.
+func (q *Queue) same(it Item) bool {
+	data, err := os.ReadFile(q.path(it.ID))
+	if err != nil {
+		return false
+	}
+	var cur Item
+	return json.Unmarshal(data, &cur) == nil && cur.Created.Equal(it.Created) && cur.Op == it.Op
+}
+
 func (q *Queue) write(it Item) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	return q.writeLocked(it)
+}
+
+func (q *Queue) writeLocked(it Item) error {
 	data, err := json.Marshal(it)
 	if err != nil {
 		return err
@@ -127,6 +157,24 @@ func (q *Queue) Remove(id string) error {
 	return err
 }
 
+// finish removes a delivered item, or records a failed attempt, unless a
+// newer Put replaced it while it was being sent.
+func (q *Queue) finish(it Item, delivered bool) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if !q.same(it) {
+		return nil
+	}
+	if delivered {
+		err := os.Remove(q.path(it.ID))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	return q.writeLocked(it)
+}
+
 // MaxAttempts is where an item is considered stuck and left for the user.
 const MaxAttempts = 20
 
@@ -171,7 +219,7 @@ func (q *Queue) drain(ctx context.Context, s Sender) (pending, stuck int) {
 		}
 		err := s.Send(ctx, it)
 		if err == nil {
-			if err := q.Remove(it.ID); err != nil {
+			if err := q.finish(it, true); err != nil {
 				slog.Error("queue: remove", "id", it.ID, "err", err)
 			}
 			continue
@@ -187,7 +235,7 @@ func (q *Queue) drain(ctx context.Context, s Sender) (pending, stuck int) {
 			pending++
 			slog.Info("queue: retry later", "title", it.Title, "attempt", it.Attempts, "err", err)
 		}
-		if werr := q.write(it); werr != nil {
+		if werr := q.finish(it, false); werr != nil {
 			slog.Error("queue: update", "id", it.ID, "err", werr)
 		}
 		if ctx.Err() != nil {

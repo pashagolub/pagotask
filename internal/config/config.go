@@ -22,6 +22,7 @@ var Default []byte
 // Config is the whole config.yaml.
 type Config struct {
 	Hotkey      string            `yaml:"hotkey"`
+	TasksHotkey string            `yaml:"tasks_hotkey"` // opens the open-tasks popup
 	DefaultList string            `yaml:"default_list"`
 	Lists       map[string]string `yaml:"lists"` // key letter -> Google Tasks list title
 	Tags        map[string]Tag    `yaml:"tags"`  // tag id -> tag
@@ -119,6 +120,9 @@ func Parse(data []byte) (*Config, error) {
 func (c *Config) validate() error {
 	if c.Hotkey == "" {
 		c.Hotkey = "Win+Shift+T"
+	}
+	if c.TasksHotkey == "" {
+		c.TasksHotkey = "Win+Shift+D"
 	}
 	if len(c.Lists) == 0 {
 		return errors.New("lists must not be empty")
