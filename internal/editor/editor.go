@@ -15,10 +15,11 @@ type Draft struct {
 
 // TagInfo and ListInfo are the catalog the popup renders from.
 type TagInfo struct {
-	ID    string `json:"id"`
-	Emoji string `json:"emoji"`
-	Key   string `json:"key"`
-	List  string `json:"list"`
+	ID      string   `json:"id"`
+	Emoji   string   `json:"emoji"`
+	Key     string   `json:"key"`
+	Aliases []string `json:"aliases"`
+	List    string   `json:"list"`
 }
 
 type ListInfo struct {

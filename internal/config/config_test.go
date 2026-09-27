@@ -19,6 +19,9 @@ func TestDefaultParses(t *testing.T) {
 	if id, _, ok := c.TagByKey("PR"); !ok || id != "pr" {
 		t.Errorf("TagByKey(PR) = %q, %v", id, ok)
 	}
+	if id, _, ok := c.TagByKey("swim"); !ok || id != "walk" {
+		t.Errorf("TagByKey(swim) = %q, %v", id, ok)
+	}
 	if c.Tags["mail"].Key != "mail" {
 		t.Errorf("key should default to id, got %q", c.Tags["mail"].Key)
 	}
@@ -36,6 +39,7 @@ func TestValidation(t *testing.T) {
 		"lists: {p: Personal}\ndefault_list: x":                                                               "not in lists",
 		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: 'a b'}}":                            "without spaces",
 		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: pr}, b: {emoji: y, key: PR}}":       "share key",
+		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: pr}, b: {emoji: y, aliases: [pr]}}": "share key",
 		"lists: {p: Personal}\ndefault_list: p\nrules: [{match: '(', tag: a}]":                                "unknown tag",
 		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: a}}\nrules: [{match: '(', tag: a}]": "missing closing",
 		"lists: {p: Personal}\ndefault_list: p\nsources: {x.exe: {read: clipboard}}":                          "read must be",

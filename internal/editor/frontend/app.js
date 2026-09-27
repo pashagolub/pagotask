@@ -13,7 +13,10 @@
 
   function index() {
     tagByKey = {}; tagById = {}; listByKey = {};
-    for (const t of catalog.tags) { tagByKey[t.key.toLowerCase()] = t; tagById[t.id] = t; }
+    for (const t of catalog.tags) {
+      tagById[t.id] = t;
+      for (const k of [t.key, ...(t.aliases || [])]) tagByKey[k.toLowerCase()] = t;
+    }
     for (const l of catalog.lists) listByKey[l.key] = l;
   }
 
@@ -56,7 +59,7 @@
     pickerMode = mode;
     picker.innerHTML = "";
     const items = mode === "list" ? catalog.lists.map((l) => ({ k: l.key, label: l.title }))
-      : catalog.tags.map((t) => ({ k: t.key.toLowerCase(), label: t.emoji }));
+      : catalog.tags.flatMap((t) => [t.key, ...(t.aliases || [])].map((k) => ({ k: k.toLowerCase(), label: t.emoji })));
     for (const it of items) {
       const el = document.createElement("span");
       el.className = "opt";

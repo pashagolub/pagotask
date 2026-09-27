@@ -12,6 +12,7 @@ lists:
 
 # Tag id -> emoji template. The id (or an explicit `key`) is the word you type
 # first in the title line: "pr pgwatch #345", "call mom", "mail invoice".
+# `aliases` are more words for the same tag: "run 5k" and "swim" both get ⏱️.
 tags:
   talk:      { emoji: "🎤" }
   video:     { emoji: "🎥" }
@@ -21,17 +22,17 @@ tags:
   health:    { emoji: "💉" }
   chat:      { emoji: "💬" }
   finance:   { emoji: "💰" }
-  walk:      { emoji: "⏱️" }
+  walk:      { emoji: "⏱️", aliases: [run, swim, hike, bike] }
   forms:     { emoji: "✅" }
   checkin:   { emoji: "✈️" }
-  is:        { emoji: "🇮🇸", list: c }
-  pr:        { emoji: "🇵🇷", list: c }
+  is:        { emoji: "🇮🇸", list: c, aliases: [issue] }
+  pr:        { emoji: "🇵🇷", list: c, aliases: [pull] }
   translate: { emoji: "🈶" }
   research:  { emoji: "🎓" }
   paper:     { emoji: "💼" }
   write:     { emoji: "📝" }
   call:      { emoji: "📞" }
-  mail:      { emoji: "📫" }
+  mail:      { emoji: "📫", aliases: [email] }
   auto:      { emoji: "🚐" }
   shop:      { emoji: "🛒" }
   fix:       { emoji: "🛠️" }
