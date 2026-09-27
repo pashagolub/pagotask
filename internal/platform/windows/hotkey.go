@@ -93,6 +93,10 @@ func (h *Hotkey) Register(combo string, fn func()) error {
 		h.threadID = windows.GetCurrentThreadId()
 		r, _, e := procRegisterHotKey.Call(0, h.id, mods, vk)
 		if r == 0 {
+			// Nothing to unregister: without this, Unregister would wait on a
+			// message loop that never ran and Quit would hang.
+			h.threadID = 0
+			close(h.done)
 			errCh <- fmt.Errorf("RegisterHotKey(%s): %v (is it taken by another app?)", combo, e)
 			return
 		}

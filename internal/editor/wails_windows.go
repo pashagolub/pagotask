@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -38,9 +39,10 @@ type wailsEditor struct {
 	tasks *application.WebviewWindow
 	tray  *tray
 
-	mu      sync.Mutex
-	started bool
-	current *Draft // the draft on screen, for a page that loads after Open
+	mu       sync.Mutex
+	started  bool
+	quitting atomic.Bool // closing windows really closes them
+	current  *Draft      // the draft on screen, for a page that loads after Open
 }
 
 // New returns the Wails-backed editor.
@@ -131,6 +133,9 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 	})
 	// Closing (Alt+F4) only hides the popup; the app lives in the tray.
 	e.win.RegisterHook(events.Common.WindowClosing, func(ev *application.WindowEvent) {
+		if e.quitting.Load() {
+			return
+		}
 		ev.Cancel()
 		e.hide()
 	})
@@ -150,6 +155,9 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 		Windows:       application.WindowsWindow{HiddenOnTaskbar: true},
 	})
 	e.tasks.RegisterHook(events.Common.WindowClosing, func(ev *application.WindowEvent) {
+		if e.quitting.Load() {
+			return
+		}
 		ev.Cancel()
 		e.tasks.Hide()
 	})
@@ -217,6 +225,7 @@ func (e *wailsEditor) hide() {
 }
 
 func (e *wailsEditor) Quit() {
+	e.quitting.Store(true)
 	if e.app != nil {
 		e.app.Quit()
 	}

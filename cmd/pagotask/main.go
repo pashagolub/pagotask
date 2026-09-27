@@ -95,7 +95,15 @@ func main() {
 		p, _ := config.Path()
 		_ = openFile(p)
 	})
-	tray.OnQuit(a.editor.Quit)
+	tray.OnQuit(func() {
+		// Quit must never leave a live icon that ignores it: if shutdown
+		// hangs, exit anyway. Queued work is on disk and survives.
+		time.AfterFunc(3*time.Second, func() {
+			slog.Warn("quit: shutdown did not finish, exiting")
+			os.Exit(0)
+		})
+		a.editor.Quit()
+	})
 
 	err = a.editor.Run(editor.Callbacks{
 		Catalog:     a.catalog,
