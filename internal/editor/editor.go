@@ -1,10 +1,13 @@
-// Package editor is the capture popup: one title line, list and due chips,
-// optional notes. The Windows build renders it with Wails v3 (WebView2),
+// Package editor is the capture popup (one title line, list and due chips,
+// optional notes) and the open-tasks popup (check tasks off). The Windows build renders it with Wails v3 (WebView2),
 // which also owns the tray icon; other platforms get a headless stand-in
 // until they have a window backend.
 package editor
 
-import "github.com/pashagolub/pagotask/internal/platform"
+import (
+	"github.com/pashagolub/pagotask/internal/opentasks"
+	"github.com/pashagolub/pagotask/internal/platform"
+)
 
 // Draft is what the popup shows and returns. Tag is a tag id, List a list
 // key, Due a keyword such as "tod", "tom", "fri", "+3" or a date.
@@ -37,12 +40,23 @@ type Catalog struct {
 	DefaultList string     `json:"defaultList"`
 }
 
-// Callbacks wire the popup to the app.
+// TaskView is what the open-tasks popup renders: rows plus a status line
+// (not signed in, refresh failed), empty when all is well.
+type TaskView struct {
+	Rows []opentasks.Row `json:"rows"`
+	Note string          `json:"note"`
+}
+
+// Callbacks wire the popups to the app.
 type Callbacks struct {
 	Catalog func() Catalog
 	OnSave  func(Draft) error // return an error to keep the popup open with a message
-	OnStart func()            // runs once the window backend is up (register hotkey, start tray)
-	OnStop  func()
+
+	Tasks       func() TaskView
+	OnToggle    func(taskID string, done bool) error
+	OnTasksOpen func() // the open-tasks popup was shown: refresh from Google
+	OnStart     func() // runs once the window backend is up (register hotkey, start tray)
+	OnStop      func()
 }
 
 // Editor is the popup window.
@@ -51,6 +65,10 @@ type Editor interface {
 	Run(cb Callbacks) error
 	// Open shows the popup prefilled with d. Safe to call from any goroutine.
 	Open(d Draft)
+	// OpenTasks shows the open-tasks popup. Safe to call from any goroutine.
+	OpenTasks()
+	// TasksChanged tells the open-tasks popup to re-read Callbacks.Tasks.
+	TasksChanged()
 	// Quit ends Run.
 	Quit()
 	// Tray is the status icon, which lives in the same UI backend.

@@ -69,3 +69,29 @@ func TestPutListDrain(t *testing.T) {
 		t.Errorf("second pass pending=%d stuck=%d", pending, stuck)
 	}
 }
+
+// replacingSender puts a newer toggle for the same task while the older one
+// is being sent, as a quick check-then-uncheck would.
+type replacingSender struct{ q *Queue }
+
+func (r *replacingSender) Send(_ context.Context, it Item) error {
+	if it.Op == OpComplete {
+		return r.q.Put(Item{ID: it.ID, Op: OpReopen, TaskID: it.TaskID})
+	}
+	return errors.New("offline")
+}
+
+func TestToggleReplacedWhileSending(t *testing.T) {
+	q, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := q.Put(Item{ID: ToggleID("a"), Op: OpComplete, TaskID: "a"}); err != nil {
+		t.Fatal(err)
+	}
+	q.drain(context.Background(), &replacingSender{q: q})
+	items, _ := q.List()
+	if len(items) != 1 || items[0].Op != OpReopen || items[0].Attempts != 0 {
+		t.Fatalf("items = %+v, want the newer reopen untouched", items)
+	}
+}

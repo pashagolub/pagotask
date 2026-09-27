@@ -25,6 +25,7 @@ type Tray interface {
 	SetPending(pending, stuck int)
 	SetSignedIn(bool)
 	OnAdd(func())
+	OnTasks(func())
 	OnSignIn(func())
 	OnSignOut(func())
 	OnOpenConfig(func())

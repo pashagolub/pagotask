@@ -32,6 +32,15 @@ func (h *headless) Open(d Draft) {
 	slog.Info("editor (headless): would open", "draft", d)
 }
 
+func (h *headless) OpenTasks() {
+	if h.cb.OnTasksOpen != nil {
+		h.cb.OnTasksOpen()
+	}
+	slog.Info("editor (headless): would show open tasks", "rows", len(h.cb.Tasks().Rows))
+}
+
+func (h *headless) TasksChanged() {}
+
 func (h *headless) Quit() { close(h.quit) }
 
 func (h *headless) Tray() platform.Tray { return nopTray{} }
@@ -48,6 +57,7 @@ func (nopTray) Stop()               {}
 func (nopTray) SetPending(int, int) {}
 func (nopTray) SetSignedIn(bool)    {}
 func (nopTray) OnAdd(func())        {}
+func (nopTray) OnTasks(func())      {}
 func (nopTray) OnSignIn(func())     {}
 func (nopTray) OnSignOut(func())    {}
 func (nopTray) OnOpenConfig(func()) {}

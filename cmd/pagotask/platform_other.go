@@ -13,3 +13,5 @@ func newPlatform() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 }
 
 func openFile(path string) error { return other.OpenFile(path) }
+
+func newHotkey() platform.Hotkey { return other.NewHotkey() }

@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -24,19 +25,24 @@ var iconICO []byte
 const (
 	winWidth  = 560
 	winHeight = 190
+
+	tasksWidth  = 640
+	tasksHeight = 460
 )
 
 // wailsEditor is one Wails v3 application that owns both the popup window
 // and the tray icon, so both live on the app's UI thread.
 type wailsEditor struct {
-	cb   Callbacks
-	app  *application.App
-	win  *application.WebviewWindow
-	tray *tray
+	cb    Callbacks
+	app   *application.App
+	win   *application.WebviewWindow
+	tasks *application.WebviewWindow
+	tray  *tray
 
-	mu      sync.Mutex
-	started bool
-	current *Draft // the draft on screen, for a page that loads after Open
+	mu       sync.Mutex
+	started  bool
+	quitting atomic.Bool // closing windows really closes them
+	current  *Draft      // the draft on screen, for a page that loads after Open
 }
 
 // New returns the Wails-backed editor.
@@ -69,6 +75,29 @@ func (a *App) Save(d Draft) string {
 
 // Cancel is called on Esc.
 func (a *App) Cancel() { a.e.hide() }
+
+// Tasks returns the rows for the open-tasks popup.
+func (a *App) Tasks() TaskView { return a.e.cb.Tasks() }
+
+// Toggle checks (done) or unchecks a task. A non-empty return is shown as an error.
+func (a *App) Toggle(id string, done bool) string {
+	if err := a.e.cb.OnToggle(id, done); err != nil {
+		return err.Error()
+	}
+	return ""
+}
+
+// OpenLink opens url in the default browser and hides the tasks popup.
+func (a *App) OpenLink(url string) string {
+	if err := a.e.app.Browser.OpenURL(url); err != nil {
+		return err.Error()
+	}
+	a.e.tasks.Hide()
+	return ""
+}
+
+// CloseTasks is called on Esc in the tasks popup.
+func (a *App) CloseTasks() { a.e.tasks.Hide() }
 
 func (e *wailsEditor) Run(cb Callbacks) error {
 	e.cb = cb
@@ -104,8 +133,33 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 	})
 	// Closing (Alt+F4) only hides the popup; the app lives in the tray.
 	e.win.RegisterHook(events.Common.WindowClosing, func(ev *application.WindowEvent) {
+		if e.quitting.Load() {
+			return
+		}
 		ev.Cancel()
 		e.hide()
+	})
+
+	e.tasks = e.app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:          "tasks",
+		Title:         "pagotask: open tasks",
+		URL:           "/tasks.html",
+		Width:         tasksWidth,
+		Height:        tasksHeight,
+		MinWidth:      tasksWidth,
+		MinHeight:     tasksHeight,
+		Frameless:     true,
+		AlwaysOnTop:   true,
+		DisableResize: true,
+		Hidden:        true,
+		Windows:       application.WindowsWindow{HiddenOnTaskbar: true},
+	})
+	e.tasks.RegisterHook(events.Common.WindowClosing, func(ev *application.WindowEvent) {
+		if e.quitting.Load() {
+			return
+		}
+		ev.Cancel()
+		e.tasks.Hide()
 	})
 
 	e.tray.build(e.app)
@@ -136,6 +190,31 @@ func (e *wailsEditor) Open(d Draft) {
 	slog.Debug("editor opened", "draft", d)
 }
 
+func (e *wailsEditor) OpenTasks() {
+	e.mu.Lock()
+	started := e.started
+	e.mu.Unlock()
+	if !started {
+		return
+	}
+	if e.cb.OnTasksOpen != nil {
+		go e.cb.OnTasksOpen()
+	}
+	e.app.Event.Emit("tasks-open")
+	e.tasks.Center()
+	e.tasks.Show()
+	e.tasks.Focus()
+}
+
+func (e *wailsEditor) TasksChanged() {
+	e.mu.Lock()
+	started := e.started
+	e.mu.Unlock()
+	if started {
+		e.app.Event.Emit("tasks-changed")
+	}
+}
+
 func (e *wailsEditor) hide() {
 	e.mu.Lock()
 	e.current = nil
@@ -146,6 +225,7 @@ func (e *wailsEditor) hide() {
 }
 
 func (e *wailsEditor) Quit() {
+	e.quitting.Store(true)
 	if e.app != nil {
 		e.app.Quit()
 	}
@@ -154,7 +234,7 @@ func (e *wailsEditor) Quit() {
 // tray is the notification-area icon: left click opens the popup, right
 // click shows the menu.
 type tray struct {
-	onAdd, onSignIn, onSignOut, onOpenConfig, onQuit func()
+	onAdd, onTasks, onSignIn, onSignOut, onOpenConfig, onQuit func()
 
 	t                 *application.SystemTray
 	menu              *application.Menu
@@ -164,6 +244,7 @@ type tray struct {
 func (t *tray) build(app *application.App) {
 	t.menu = app.Menu.New()
 	t.menu.Add("Add task").OnClick(func(*application.Context) { call(t.onAdd) })
+	t.menu.Add("Open tasks").OnClick(func(*application.Context) { call(t.onTasks) })
 	t.menu.AddSeparator()
 	t.mSignIn = t.menu.Add("Sign in to Google").OnClick(func(*application.Context) { call(t.onSignIn) })
 	t.mSignOut = t.menu.Add("Sign out").OnClick(func(*application.Context) { call(t.onSignOut) })
@@ -186,6 +267,7 @@ func call(f func()) {
 }
 
 func (t *tray) OnAdd(f func())        { t.onAdd = f }
+func (t *tray) OnTasks(f func())      { t.onTasks = f }
 func (t *tray) OnSignIn(f func())     { t.onSignIn = f }
 func (t *tray) OnSignOut(f func())    { t.onSignOut = f }
 func (t *tray) OnOpenConfig(f func()) { t.onOpenConfig = f }
