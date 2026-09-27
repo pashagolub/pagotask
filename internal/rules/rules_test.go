@@ -24,6 +24,20 @@ func TestPrefill(t *testing.T) {
 		t.Errorf("FullTitle = %q", got)
 	}
 
+	// Address bar unreadable: the tab title still identifies the PR.
+	noURL := Capture{
+		Process: "firefox.exe",
+		Title:   "Switch to Wails v3: popup and tray in one app by pashagolub · Pull Request #6 · pashagolub/pagotask — Mozilla Firefox",
+	}
+	d = Prefill(c, noURL)
+	if d.Tag != "pr" || d.Title != "pagotask #6" || d.List != "c" {
+		t.Errorf("title-only pr draft = %+v", d)
+	}
+	d = Prefill(c, Capture{Process: "firefox.exe", Title: "Crash on start · Issue #12 · cybertec-postgresql/pgwatch — Mozilla Firefox"})
+	if d.Tag != "is" || d.Title != "pgwatch #12" || d.List != "w" {
+		t.Errorf("title-only issue draft = %+v", d)
+	}
+
 	issue := Capture{Process: "chrome.exe", URL: "https://github.com/someone/tool/issues/7"}
 	d = Prefill(c, issue)
 	if d.Tag != "is" || d.Title != "tool #7" || d.List != "c" {

@@ -55,6 +55,18 @@ rules:
     tag: is
     title: "{2} #{3}"
     list: { "cybertec-postgresql/": w }
+  # Fallbacks when the address bar can't be read: GitHub tab titles end
+  # with "· Pull Request #6 · owner/repo".
+  - match: '· Pull Request #(\d+) · ([^/\s]+)/([^/\s]+)'
+    on: title
+    tag: pr
+    title: "{3} #{1}"
+    list: { "cybertec-postgresql/": w }
+  - match: '· Issue #(\d+) · ([^/\s]+)/([^/\s]+)'
+    on: title
+    tag: is
+    title: "{3} #{1}"
+    list: { "cybertec-postgresql/": w }
 
 # Optional: bring your own Google OAuth desktop client.
 # google:
