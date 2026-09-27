@@ -51,7 +51,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	reader, hk, tray, store := newPlatform()
+	reader, hk, store := newPlatform()
+	ed := editor.New()
+	tray := ed.Tray()
 	auth, err := gtasks.NewAuth(cfg.Google.ClientID, cfg.Google.ClientSecret, store)
 	if err != nil {
 		slog.Error("auth", "err", err)
@@ -62,7 +64,7 @@ func main() {
 		slog.Error("queue", "err", err)
 		os.Exit(1)
 	}
-	a := &app{cfg: cfg, reader: reader, hotkey: hk, tray: tray, editor: editor.New(), auth: auth, queue: q}
+	a := &app{cfg: cfg, reader: reader, hotkey: hk, tray: tray, editor: ed, auth: auth, queue: q}
 	a.client = gtasks.NewClient(auth, func() map[string]string { return a.config().Lists })
 	q.OnIdle = tray.SetPending
 	a.ctx, a.cancel = context.WithCancel(context.Background())

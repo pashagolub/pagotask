@@ -2,7 +2,11 @@
 
 package editor
 
-import "log/slog"
+import (
+	"log/slog"
+
+	"github.com/pashagolub/pagotask/internal/platform"
+)
 
 type headless struct {
 	cb   Callbacks
@@ -29,3 +33,22 @@ func (h *headless) Open(d Draft) {
 }
 
 func (h *headless) Quit() { close(h.quit) }
+
+func (h *headless) Tray() platform.Tray { return nopTray{} }
+
+// nopTray has no icon: the headless build has nothing to click.
+type nopTray struct{}
+
+func (nopTray) Start(onReady func()) {
+	if onReady != nil {
+		onReady()
+	}
+}
+func (nopTray) Stop()               {}
+func (nopTray) SetPending(int, int) {}
+func (nopTray) SetSignedIn(bool)    {}
+func (nopTray) OnAdd(func())        {}
+func (nopTray) OnSignIn(func())     {}
+func (nopTray) OnSignOut(func())    {}
+func (nopTray) OnOpenConfig(func()) {}
+func (nopTray) OnQuit(func())       {}

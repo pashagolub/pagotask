@@ -23,7 +23,7 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
           pkg=github.com/pashagolub/pagotask/internal/gtasks
-          GOOS=windows GOARCH=amd64 go build -tags desktop,production \
+          GOOS=windows GOARCH=amd64 go build -tags production \
             -ldflags "-H windowsgui -X $pkg.DefaultClientID=$GOOGLE_CLIENT_ID -X $pkg.DefaultClientSecret=$GOOGLE_CLIENT_SECRET" \
             -o dist/pagotask.exe ./cmd/pagotask
       - uses: actions/upload-artifact@v4

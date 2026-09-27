@@ -16,7 +16,7 @@ yet.
 ## Build
 
 ```
-go build -tags desktop,production -ldflags "-H windowsgui" -o pagotask.exe ./cmd/pagotask
+go build -tags production -ldflags "-H windowsgui" -o pagotask.exe ./cmd/pagotask
 ```
 
 The popup is a [Wails](https://wails.io) v2 window (WebView2, preinstalled on
@@ -25,7 +25,7 @@ Windows 10/11). Plain `go build` is enough; the Wails CLI is not needed.
 Sign-in needs a Google OAuth desktop client. Either bake one in:
 
 ```
-go build -tags desktop,production -ldflags "-H windowsgui -X github.com/pashagolub/pagotask/internal/gtasks.DefaultClientID=... -X github.com/pashagolub/pagotask/internal/gtasks.DefaultClientSecret=..." ./cmd/pagotask
+go build -tags production -ldflags "-H windowsgui -X github.com/pashagolub/pagotask/internal/gtasks.DefaultClientID=... -X github.com/pashagolub/pagotask/internal/gtasks.DefaultClientSecret=..." ./cmd/pagotask
 ```
 
 or put `google.client_id` / `google.client_secret` in `config.yaml`.
@@ -43,8 +43,8 @@ and rules (URL/title regexps that prefill tag, title and list).
 - `internal/config` – YAML config and validation
 - `internal/rules` – capture → prefilled draft
 - `internal/dates` – `tod`, `tom`, `mon`, `+3` …
-- `internal/editor` – the popup (Wails on Windows, headless elsewhere); `frontend/` is plain HTML/JS
+- `internal/editor` – popup and tray icon, one Wails v3 app on Windows (headless elsewhere); `frontend/` is plain HTML/JS
 - `internal/queue` – on-disk outbox with retries
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
-  Credential Manager, systray) and `other/` (headless stand-in)
+  Credential Manager) and `other/` (headless stand-in)

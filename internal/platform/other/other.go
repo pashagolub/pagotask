@@ -2,7 +2,7 @@
 
 // Package other is a stand-in for platforms not yet implemented. It lets
 // the app compile and run headless for development on Linux/macOS: no
-// tray, no hotkey, no page reading.
+// hotkey and no page reading.
 package other
 
 import (
@@ -27,26 +27,10 @@ func (hotkey) Register(string, func()) error {
 }
 func (hotkey) Unregister() error { return nil }
 
-type tray struct{}
-
-func (t *tray) Start(onReady func()) {
-	if onReady != nil {
-		onReady()
-	}
-}
-func (t *tray) Stop()               {}
-func (t *tray) SetPending(int, int) {}
-func (t *tray) SetSignedIn(bool)    {}
-func (t *tray) OnAdd(func())        {}
-func (t *tray) OnSignIn(func())     {}
-func (t *tray) OnSignOut(func())    {}
-func (t *tray) OnOpenConfig(func()) {}
-func (t *tray) OnQuit(func())       {}
-
 // New returns the headless implementations.
-func New() (platform.PageReader, platform.Hotkey, platform.Tray, gtasks.TokenStore) {
+func New() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 	dir, _ := config.Dir()
-	return reader{}, hotkey{}, &tray{}, gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
+	return reader{}, hotkey{}, gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
 }
 
 // OpenFile opens a file with the desktop's default application.

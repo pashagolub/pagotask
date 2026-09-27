@@ -8,7 +8,7 @@ import (
 	"github.com/pashagolub/pagotask/internal/platform/other"
 )
 
-func newPlatform() (platform.PageReader, platform.Hotkey, platform.Tray, gtasks.TokenStore) {
+func newPlatform() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 	return other.New()
 }
 
