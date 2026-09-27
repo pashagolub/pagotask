@@ -1,0 +1,60 @@
+# pagotask configuration. Edited by hand; changes apply live.
+
+hotkey: Win+Shift+T
+default_list: p
+
+# Single-letter key -> Google Tasks list title (must match the list name in Google Tasks).
+lists:
+  w: Work
+  f: Family
+  p: Personal
+  c: Community
+
+# Tag id -> emoji template. `key` is the letter you type first in the title line.
+tags:
+  talk:        { emoji: "🎤", key: t }
+  video:       { emoji: "🎥", key: v }
+  release:     { emoji: "🏗️", key: r, list: w }
+  home:        { emoji: "🏠", key: h, list: f }
+  family:      { emoji: "👨‍👩‍👧‍👦", key: y, list: f }
+  health:      { emoji: "💉", key: d }
+  chat:        { emoji: "💬", key: c }
+  finance:     { emoji: "💰", key: $ }
+  walking:     { emoji: "⏱️", key: k }
+  forms:       { emoji: "✅", key: o }
+  checkin:     { emoji: "✈️", key: a }
+  issue:       { emoji: "🇮🇸", key: i, list: c }
+  pr:          { emoji: "🇵🇷", key: p, list: c }
+  translation: { emoji: "🈶", key: n }
+  research:    { emoji: "🎓", key: g }
+  paperwork:   { emoji: "💼", key: b }
+  writing:     { emoji: "📝", key: e }
+  call:        { emoji: "📞", key: l }
+  mail:        { emoji: "📫", key: m }
+  auto:        { emoji: "🚐", key: u }
+  shopping:    { emoji: "🛒", key: s }
+  maintenance: { emoji: "🛠️", key: x }
+  tourism:     { emoji: "🥾", key: z }
+
+# Process name -> what to read from that application when it is in front.
+sources:
+  firefox.exe: { read: url }
+  chrome.exe:  { read: url }
+  msedge.exe:  { read: url }
+  Code.exe:    { read: title }
+
+# First matching rule wins. {1}, {2}... are regexp capture groups.
+rules:
+  - match: 'github\.com/([^/]+)/([^/]+)/pull/(\d+)'
+    tag: pr
+    title: "{2} #{3}"
+    list: { "cybertec-postgresql/": w }
+  - match: 'github\.com/([^/]+)/([^/]+)/issues/(\d+)'
+    tag: issue
+    title: "{2} #{3}"
+    list: { "cybertec-postgresql/": w }
+
+# Optional: bring your own Google OAuth desktop client.
+# google:
+#   client_id: ...
+#   client_secret: ...
