@@ -4,7 +4,7 @@ package windows
 
 import (
 	"log/slog"
-	"strings"
+	"runtime"
 	"syscall"
 	"unsafe"
 
@@ -14,7 +14,7 @@ import (
 // UI Automation is used to read the address bar of the focused browser
 // without touching the clipboard. Only the handful of COM calls needed are
 // bound here: CUIAutomation.ElementFromHandle, CreatePropertyCondition,
-// IUIAutomationElement.FindFirst and the ValuePattern's CurrentValue.
+// IUIAutomationElement.FindAll and the ValuePattern's CurrentValue.
 
 var (
 	clsidCUIAutomation       = ole.NewGUID("{ff48dba4-60ef-4201-aa87-54103eef594e}")
@@ -27,6 +27,8 @@ const (
 	uiaControlTypeProp   = 30003
 	uiaValuePatternID    = 10002
 	uiaEditControlType   = 50004
+	uiaAutomationIDProp  = 30011
+	firefoxURLBarID      = "urlbar-input"
 )
 
 // vtable slots (0-based) of the interfaces we call; IUnknown occupies 0-2.
@@ -34,9 +36,16 @@ const (
 	slotElementFromHandle       = 6  // IUIAutomation
 	slotCreatePropertyCondition = 23 // IUIAutomation
 	slotFindFirst               = 5  // IUIAutomationElement
+	slotFindAll                 = 6  // IUIAutomationElement
 	slotGetCurrentPattern       = 16 // IUIAutomationElement
-	slotCurrentName             = 23 // IUIAutomationElement
 	slotValueCurrentValue       = 4  // IUIAutomationValuePattern
+	slotArrayLength             = 3  // IUIAutomationElementArray
+	slotArrayGetElement         = 4  // IUIAutomationElementArray
+)
+
+const (
+	sFalse          = 0x00000001
+	rpcEChangedMode = 0x80010106
 )
 
 func vcall(obj *ole.IUnknown, slot int, args ...uintptr) (uintptr, error) {
@@ -50,6 +59,10 @@ func vcall(obj *ole.IUnknown, slot int, args ...uintptr) (uintptr, error) {
 }
 
 // browserURL returns the URL shown in the address bar of hwnd, or "".
+// It looks at every edit control of the window and takes the first whose
+// value looks like an address: web pages have edit controls of their own
+// (GitHub's search box, comment fields), so the first edit found is not
+// necessarily the address bar.
 func browserURL(hwnd uintptr) (url string) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -57,12 +70,20 @@ func browserURL(hwnd uintptr) (url string) {
 			url = ""
 		}
 	}()
-	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
-		if oleErr, ok := err.(*ole.OleError); !ok || oleErr.Code() != 1 { // S_FALSE: already initialised
-			return ""
-		}
+	// COM state belongs to the OS thread; keep this goroutine on one.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	switch err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); {
+	case err == nil:
+		defer ole.CoUninitialize()
+	case isHRESULT(err, sFalse):
+		defer ole.CoUninitialize() // already initialised; balance the call
+	case isHRESULT(err, rpcEChangedMode):
+		// Initialised with another model by someone else: usable, not ours to undo.
+	default:
+		slog.Warn("uia: CoInitializeEx", "err", err)
+		return ""
 	}
-	defer ole.CoUninitialize()
 
 	auto, err := ole.CreateInstance(clsidCUIAutomation, iidIUIAutomation)
 	if err != nil {
@@ -73,26 +94,76 @@ func browserURL(hwnd uintptr) (url string) {
 
 	var root *ole.IUnknown
 	if _, err := vcall(auto, slotElementFromHandle, hwnd, uintptr(unsafe.Pointer(&root))); err != nil || root == nil {
+		slog.Warn("uia: ElementFromHandle", "err", err)
 		return ""
 	}
 	defer root.Release()
+
+	// Fast path: Firefox names its address bar, so one lookup finds it
+	// without walking the whole page.
+	if u, ok := asURL(firstValue(auto, root, uiaAutomationIDProp, firefoxURLBarID)); ok {
+		return u
+	}
 
 	// Condition: ControlType == Edit.
 	v := ole.NewVariant(ole.VT_I4, uiaEditControlType)
 	var cond *ole.IUnknown
 	if _, err := vcall(auto, slotCreatePropertyCondition, uiaControlTypeProp, uintptr(unsafe.Pointer(&v)), uintptr(unsafe.Pointer(&cond))); err != nil || cond == nil {
+		slog.Warn("uia: CreatePropertyCondition", "err", err)
 		return ""
 	}
 	defer cond.Release()
 
-	var edit *ole.IUnknown
-	if _, err := vcall(root, slotFindFirst, treeScopeDescendants, uintptr(unsafe.Pointer(cond)), uintptr(unsafe.Pointer(&edit))); err != nil || edit == nil {
+	var arr *ole.IUnknown
+	if _, err := vcall(root, slotFindAll, treeScopeDescendants, uintptr(unsafe.Pointer(cond)), uintptr(unsafe.Pointer(&arr))); err != nil || arr == nil {
+		slog.Warn("uia: FindAll", "err", err)
 		return ""
 	}
-	defer edit.Release()
+	defer arr.Release()
 
+	var n int32
+	if _, err := vcall(arr, slotArrayLength, uintptr(unsafe.Pointer(&n))); err != nil {
+		slog.Warn("uia: element count", "err", err)
+		return ""
+	}
+	for i := int32(0); i < n; i++ {
+		var el *ole.IUnknown
+		if _, err := vcall(arr, slotArrayGetElement, uintptr(i), uintptr(unsafe.Pointer(&el))); err != nil || el == nil {
+			continue
+		}
+		val := editValue(el)
+		el.Release()
+		if u, ok := asURL(val); ok {
+			return u
+		}
+	}
+	slog.Warn("uia: no edit control holds an address", "edits", n)
+	return ""
+}
+
+// firstValue returns the value of the first descendant whose string
+// property prop equals want, or "".
+func firstValue(auto, root *ole.IUnknown, prop uintptr, want string) string {
+	bstr := ole.SysAllocString(want)
+	defer ole.SysFreeString(bstr)
+	v := ole.NewVariant(ole.VT_BSTR, int64(uintptr(unsafe.Pointer(bstr))))
+	var cond *ole.IUnknown
+	if _, err := vcall(auto, slotCreatePropertyCondition, prop, uintptr(unsafe.Pointer(&v)), uintptr(unsafe.Pointer(&cond))); err != nil || cond == nil {
+		return ""
+	}
+	defer cond.Release()
+	var el *ole.IUnknown
+	if _, err := vcall(root, slotFindFirst, treeScopeDescendants, uintptr(unsafe.Pointer(cond)), uintptr(unsafe.Pointer(&el))); err != nil || el == nil {
+		return ""
+	}
+	defer el.Release()
+	return editValue(el)
+}
+
+// editValue reads the ValuePattern of an edit control, or "".
+func editValue(el *ole.IUnknown) string {
 	var pat *ole.IUnknown
-	if _, err := vcall(edit, slotGetCurrentPattern, uiaValuePatternID, uintptr(unsafe.Pointer(&pat))); err != nil || pat == nil {
+	if _, err := vcall(el, slotGetCurrentPattern, uiaValuePatternID, uintptr(unsafe.Pointer(&pat))); err != nil || pat == nil {
 		return ""
 	}
 	defer pat.Release()
@@ -107,10 +178,10 @@ func browserURL(hwnd uintptr) (url string) {
 		return ""
 	}
 	defer ole.SysFreeString((*int16)(unsafe.Pointer(bstr)))
-	url = strings.TrimSpace(ole.BstrToString(bstr))
-	// Firefox and Chrome show the bare host without scheme for http(s) pages.
-	if url != "" && !strings.Contains(url, "://") && strings.Contains(url, ".") && !strings.ContainsAny(url, " ") {
-		url = "https://" + url
-	}
-	return url
+	return ole.BstrToString(bstr)
+}
+
+func isHRESULT(err error, code uintptr) bool {
+	oleErr, ok := err.(*ole.OleError)
+	return ok && oleErr.Code() == code
 }
