@@ -10,6 +10,7 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/api/tasks/v1"
 
+	"github.com/pashagolub/pagotask/internal/dates"
 	"github.com/pashagolub/pagotask/internal/queue"
 )
 
@@ -93,7 +94,9 @@ func (c *Client) Send(ctx context.Context, it queue.Item) error {
 	}
 	t := &tasks.Task{Title: it.Title, Notes: it.Notes}
 	if !it.Due.IsZero() {
-		t.Due = it.Due.UTC().Format("2006-01-02T00:00:00.000Z")
+		// The due date is the local calendar day. Converting local midnight
+		// to UTC first would give yesterday east of Greenwich.
+		t.Due = dates.RFC3339(it.Due)
 	}
 	_, err = svc.Tasks.Insert(listID, t).Context(ctx).Do()
 	var gerr *googleapi.Error
