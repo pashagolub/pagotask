@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>pagotask</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="popup">
+    <div class="row title-row">
+      <span id="emoji" class="emoji" title="Tag">＋</span>
+      <input id="title" type="text" spellcheck="false" autocomplete="off"
+             placeholder="p pgwatch #345   (tag key, space, title)">
+    </div>
+    <div class="row chips">
+      <button class="chip" id="list-chip" title="Ctrl+L: change list"><span class="k">L</span><span id="list-name">Personal</span></button>
+      <button class="chip" id="due-chip" title="Ctrl+D: change due date"><span class="k">D</span><input id="due" value="tod" spellcheck="false"></button>
+      <button class="chip" id="notes-chip" title="Ctrl+N: notes"><span class="k">N</span><span id="notes-state">no notes</span></button>
+      <span class="spacer"></span>
+      <span id="error" class="error"></span>
+      <span class="hint">Enter saves · Esc closes</span>
+    </div>
+    <textarea id="notes" class="hidden" rows="3" placeholder="Notes (URL goes here)"></textarea>
+    <div id="picker" class="picker hidden"></div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

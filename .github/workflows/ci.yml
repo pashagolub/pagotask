@@ -16,7 +16,7 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - name: Cross-compile for Windows
-        run: GOOS=windows GOARCH=amd64 go build -ldflags "-H windowsgui" -o dist/pagotask.exe ./cmd/pagotask
+        run: GOOS=windows GOARCH=amd64 go build -tags desktop,production -ldflags "-H windowsgui" -o dist/pagotask.exe ./cmd/pagotask
       - uses: actions/upload-artifact@v4
         with:
           name: pagotask-windows-amd64

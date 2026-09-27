@@ -18,8 +18,10 @@ type Hotkey interface {
 
 // Tray shows the status icon and menu.
 type Tray interface {
-	// Run blocks until the tray quits. onReady runs once the icon is up.
-	Run(onReady func(), onExit func())
+	// Start shows the icon without blocking; onReady runs once the menu is up.
+	Start(onReady func())
+	// Stop removes the icon.
+	Stop()
 	SetPending(pending, stuck int)
 	SetSignedIn(bool)
 	OnAdd(func())
@@ -27,5 +29,4 @@ type Tray interface {
 	OnSignOut(func())
 	OnOpenConfig(func())
 	OnQuit(func())
-	Quit()
 }

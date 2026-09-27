@@ -27,17 +27,14 @@ func (hotkey) Register(string, func()) error {
 }
 func (hotkey) Unregister() error { return nil }
 
-type tray struct{ quit chan struct{} }
+type tray struct{}
 
-func (t *tray) Run(onReady func(), onExit func()) {
+func (t *tray) Start(onReady func()) {
 	if onReady != nil {
 		onReady()
 	}
-	<-t.quit
-	if onExit != nil {
-		onExit()
-	}
 }
+func (t *tray) Stop()               {}
 func (t *tray) SetPending(int, int) {}
 func (t *tray) SetSignedIn(bool)    {}
 func (t *tray) OnAdd(func())        {}
@@ -45,12 +42,11 @@ func (t *tray) OnSignIn(func())     {}
 func (t *tray) OnSignOut(func())    {}
 func (t *tray) OnOpenConfig(func()) {}
 func (t *tray) OnQuit(func())       {}
-func (t *tray) Quit()               { close(t.quit) }
 
 // New returns the headless implementations.
 func New() (platform.PageReader, platform.Hotkey, platform.Tray, gtasks.TokenStore) {
 	dir, _ := config.Dir()
-	return reader{}, hotkey{}, &tray{quit: make(chan struct{})}, gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
+	return reader{}, hotkey{}, &tray{}, gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
 }
 
 // OpenFile opens a file with the desktop's default application.
