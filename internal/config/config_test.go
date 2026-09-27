@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDefaultParses(t *testing.T) {
@@ -13,8 +14,8 @@ func TestDefaultParses(t *testing.T) {
 	if c.Hotkey != "Win+Shift+T" {
 		t.Errorf("hotkey = %q", c.Hotkey)
 	}
-	if c.TasksHotkey != "Win+Shift+D" {
-		t.Errorf("tasks hotkey = %q", c.TasksHotkey)
+	if c.Tasks.Hotkey != "Win+Shift+D" || c.Tasks.Refresh != 5*time.Minute || len(c.TaskLists()) != 4 {
+		t.Errorf("tasks = %+v", c.Tasks)
 	}
 	if len(c.Tags) != 23 {
 		t.Errorf("tags = %d, want 23", len(c.Tags))
@@ -46,11 +47,23 @@ func TestValidation(t *testing.T) {
 		"lists: {p: Personal}\ndefault_list: p\nrules: [{match: '(', tag: a}]":                                "unknown tag",
 		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: a}}\nrules: [{match: '(', tag: a}]": "missing closing",
 		"lists: {p: Personal}\ndefault_list: p\nsources: {x.exe: {read: clipboard}}":                          "read must be",
+		"lists: {p: Personal}\ndefault_list: p\ntasks: {lists: [w]}":                                          "unknown list",
+		"lists: {p: Personal}\ndefault_list: p\ntasks: {refresh: 10s}":                                        "below the minimum",
 	}
 	for in, want := range cases {
 		_, err := Parse([]byte(in))
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%q: err = %v, want containing %q", in, err, want)
 		}
+	}
+}
+
+func TestTaskListsSubset(t *testing.T) {
+	c, err := Parse([]byte("lists: {p: Personal, w: Work}\ndefault_list: p\ntasks: {lists: [w], refresh: 2m}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l := c.TaskLists(); len(l) != 1 || l["w"] != "Work" || c.Tasks.Refresh != 2*time.Minute {
+		t.Errorf("task lists = %v, refresh = %s", l, c.Tasks.Refresh)
 	}
 }

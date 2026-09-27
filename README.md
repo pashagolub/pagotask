@@ -18,7 +18,9 @@ yet.
 
 `Win+Shift+D` (or "Open tasks" in the tray menu) shows open tasks from the
 configured lists, due today or overdue, sorted by date. It opens instantly
-from a local copy that refreshes on open and every 5 minutes.
+from a local copy that refreshes on open and in the background. The `tasks:`
+section of `config.yaml` sets its hotkey, which lists it shows and the refresh
+interval.
 
 - arrows move, Space checks or unchecks; a checked task stays struck through until the popup closes
 - typing filters: title text, and tag words match their emoji (`pr pgw`); while you type, Space separates words, after an arrow key it checks
