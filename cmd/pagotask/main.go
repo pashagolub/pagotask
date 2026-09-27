@@ -41,9 +41,6 @@ type app struct {
 	note       string // why the open-tasks list may be stale, "" when fine
 }
 
-// refreshEvery is how often the open-tasks copy is refreshed in the background.
-const refreshEvery = 5 * time.Minute
-
 func main() {
 	dir, err := config.Dir()
 	if err != nil {
@@ -116,13 +113,13 @@ func main() {
 			if err := hk.Register(cfg.Hotkey, a.capture); err != nil {
 				slog.Error("hotkey", "err", err)
 			}
-			if err := a.tasksK.Register(cfg.TasksHotkey, a.editor.OpenTasks); err != nil {
+			if err := a.tasksK.Register(cfg.Tasks.Hotkey, a.editor.OpenTasks); err != nil {
 				slog.Error("tasks hotkey", "err", err)
 			}
 			go q.Run(a.ctx, a.client)
 			go a.watchConfig()
 			go a.refreshLoop()
-			slog.Info("pagotask started", "hotkey", cfg.Hotkey, "tasks_hotkey", cfg.TasksHotkey)
+			slog.Info("pagotask started", "hotkey", cfg.Hotkey, "tasks_hotkey", cfg.Tasks.Hotkey)
 		},
 		OnStop: func() {
 			a.cancel()
@@ -194,7 +191,7 @@ func (a *app) tasks() editor.TaskView {
 	if err != nil {
 		slog.Warn("queue list", "err", err)
 	}
-	v := editor.TaskView{Rows: a.store.Rows(a.config().Lists, queued, time.Now().Format("2006-01-02"))}
+	v := editor.TaskView{Rows: a.store.Rows(a.config().TaskLists(), queued, time.Now().Format("2006-01-02"))}
 	a.noteMu.Lock()
 	v.Note = a.note
 	a.noteMu.Unlock()
@@ -228,17 +225,18 @@ func (a *app) refreshSoon() {
 }
 
 // refreshLoop keeps the open-tasks copy fresh: on start, on every popup
-// open and every refreshEvery.
+// open and every tasks.refresh (re-read each round, so config edits apply).
 func (a *app) refreshLoop() {
-	t := time.NewTicker(refreshEvery)
-	defer t.Stop()
 	a.refresh()
 	for {
+		t := time.NewTimer(a.config().Tasks.Refresh)
 		select {
 		case <-a.ctx.Done():
+			t.Stop()
 			return
 		case <-t.C:
 		case <-a.refreshNow:
+			t.Stop()
 		}
 		a.refresh()
 	}
@@ -257,7 +255,7 @@ func (a *app) refresh() {
 			}
 		}
 	}
-	fetched, err := a.client.OpenTasks(a.ctx)
+	fetched, err := a.client.OpenTasks(a.ctx, a.config().TaskLists())
 	note := ""
 	if err != nil {
 		slog.Warn("refresh open tasks", "err", err)
@@ -327,9 +325,9 @@ func (a *app) watchConfig() {
 					slog.Error("hotkey", "err", err)
 				}
 			}
-			if cfg.TasksHotkey != a.config().TasksHotkey {
+			if cfg.Tasks.Hotkey != a.config().Tasks.Hotkey {
 				_ = a.tasksK.Unregister()
-				if err := a.tasksK.Register(cfg.TasksHotkey, a.editor.OpenTasks); err != nil {
+				if err := a.tasksK.Register(cfg.Tasks.Hotkey, a.editor.OpenTasks); err != nil {
 					slog.Error("tasks hotkey", "err", err)
 				}
 			}

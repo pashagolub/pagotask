@@ -118,14 +118,14 @@ func (c *Client) Send(ctx context.Context, it queue.Item) error {
 	return err
 }
 
-// OpenTasks fetches the open (unchecked) tasks of every configured list.
-func (c *Client) OpenTasks(ctx context.Context) ([]opentasks.Task, error) {
+// OpenTasks fetches the open (unchecked) tasks of the given lists (key -> title).
+func (c *Client) OpenTasks(ctx context.Context, lists map[string]string) ([]opentasks.Task, error) {
 	svc, err := c.service(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var out []opentasks.Task
-	for key := range c.lists() {
+	for key := range lists {
 		listID, err := c.ListID(ctx, key)
 		if err != nil {
 			var perm *queue.Permanent

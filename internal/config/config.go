@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +23,7 @@ var Default []byte
 // Config is the whole config.yaml.
 type Config struct {
 	Hotkey      string            `yaml:"hotkey"`
-	TasksHotkey string            `yaml:"tasks_hotkey"` // opens the open-tasks popup
+	Tasks       Tasks             `yaml:"tasks"` // the open-tasks popup
 	DefaultList string            `yaml:"default_list"`
 	Lists       map[string]string `yaml:"lists"` // key letter -> Google Tasks list title
 	Tags        map[string]Tag    `yaml:"tags"`  // tag id -> tag
@@ -38,6 +39,28 @@ type Tag struct {
 	Aliases []string `yaml:"aliases,omitempty"` // more words for the same tag ("run", "swim", "hike")
 	List    string   `yaml:"list,omitempty"`    // list key; empty means default_list
 	Title   string   `yaml:"title,omitempty"`   // optional title pattern, e.g. "{who} about {what}"
+}
+
+// Tasks configures the open-tasks popup.
+type Tasks struct {
+	Hotkey  string        `yaml:"hotkey"`            // opens the popup
+	Lists   []string      `yaml:"lists,omitempty"`   // list keys to show; empty means all lists
+	Refresh time.Duration `yaml:"refresh,omitempty"` // background refresh interval, e.g. 5m
+}
+
+// MinRefresh keeps the background refresh from hammering the Tasks API.
+const MinRefresh = time.Minute
+
+// TaskLists returns the lists (key -> title) the open-tasks popup shows.
+func (c *Config) TaskLists() map[string]string {
+	if len(c.Tasks.Lists) == 0 {
+		return c.Lists
+	}
+	out := make(map[string]string, len(c.Tasks.Lists))
+	for _, k := range c.Tasks.Lists {
+		out[k] = c.Lists[k]
+	}
+	return out
 }
 
 // Source says what to read from a foreground application, keyed by process name.
@@ -121,8 +144,14 @@ func (c *Config) validate() error {
 	if c.Hotkey == "" {
 		c.Hotkey = "Win+Shift+T"
 	}
-	if c.TasksHotkey == "" {
-		c.TasksHotkey = "Win+Shift+D"
+	if c.Tasks.Hotkey == "" {
+		c.Tasks.Hotkey = "Win+Shift+D"
+	}
+	if c.Tasks.Refresh == 0 {
+		c.Tasks.Refresh = 5 * time.Minute
+	}
+	if c.Tasks.Refresh < MinRefresh {
+		return fmt.Errorf("tasks.refresh %s is below the minimum %s", c.Tasks.Refresh, MinRefresh)
 	}
 	if len(c.Lists) == 0 {
 		return errors.New("lists must not be empty")
@@ -137,6 +166,11 @@ func (c *Config) validate() error {
 	}
 	if _, ok := c.Lists[c.DefaultList]; !ok {
 		return fmt.Errorf("default_list %q is not in lists", c.DefaultList)
+	}
+	for _, k := range c.Tasks.Lists {
+		if _, ok := c.Lists[k]; !ok {
+			return fmt.Errorf("tasks.lists refers to unknown list %q", k)
+		}
 	}
 	seenKeys := map[string]string{}
 	for id, t := range c.Tags {
