@@ -33,7 +33,7 @@ type Config struct {
 // Tag is one emoji template.
 type Tag struct {
 	Emoji string `yaml:"emoji"`
-	Key   string `yaml:"key"`             // single letter typed first in the title line
+	Key   string `yaml:"key,omitempty"`   // word typed first in the title line ("pr", "mail"); defaults to the tag id
 	List  string `yaml:"list,omitempty"`  // list key; empty means default_list
 	Title string `yaml:"title,omitempty"` // optional title pattern, e.g. "{who} about {what}"
 }
@@ -138,13 +138,18 @@ func (c *Config) validate() error {
 		if t.Emoji == "" {
 			return fmt.Errorf("tag %q has no emoji", id)
 		}
-		if len([]rune(t.Key)) != 1 {
-			return fmt.Errorf("tag %q key %q must be a single character", id, t.Key)
+		if t.Key == "" {
+			t.Key = id
+			c.Tags[id] = t
 		}
-		if other, dup := seenKeys[t.Key]; dup {
+		if !tagKeyRe.MatchString(t.Key) {
+			return fmt.Errorf("tag %q key %q must be letters, digits, - or _ without spaces", id, t.Key)
+		}
+		k := strings.ToLower(t.Key)
+		if other, dup := seenKeys[k]; dup {
 			return fmt.Errorf("tags %q and %q share key %q", other, id, t.Key)
 		}
-		seenKeys[t.Key] = id
+		seenKeys[k] = id
 		if t.List != "" {
 			if _, ok := c.Lists[t.List]; !ok {
 				return fmt.Errorf("tag %q refers to unknown list %q", id, t.List)
@@ -193,6 +198,9 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// tagKeyRe is what a tag key may look like: one word, no spaces.
+var tagKeyRe = regexp.MustCompile(`^[\pL\pN_-]+$`)
+
 // Regexp returns the compiled match expression of a validated rule.
 func (r *Rule) Regexp() *regexp.Regexp { return r.re }
 
@@ -206,7 +214,7 @@ func (r *Rule) ListFor(matched string) string {
 	return ""
 }
 
-// TagByKey finds the tag whose key letter is k.
+// TagByKey finds the tag whose key is k (case-insensitive).
 func (c *Config) TagByKey(k string) (string, Tag, bool) {
 	for id, t := range c.Tags {
 		if strings.EqualFold(t.Key, k) {

@@ -9,8 +9,8 @@ yet.
 
 ## Popup keys
 
-- type `p pgwatch #345`: a tag key, a space, then the title
-- Ctrl+L list, Ctrl+T tag, Ctrl+D due (`tod`, `tom`, `fri`, `+3`, `24.12`), Ctrl+N notes
+- type `pr pgwatch #345` or `call mom`: a tag word, a space, then the title
+- Ctrl+L list (one letter), Ctrl+T tag list filtered as you type, Ctrl+D due (`tod`, `tom`, `fri`, `+3`, `24.12`), Ctrl+N notes
 - Enter saves, Esc closes
 
 ## Build
@@ -34,7 +34,7 @@ or put `google.client_id` / `google.client_secret` in `config.yaml`.
 
 `%APPDATA%\pagotask\config.yaml` is written with defaults on first run and
 reloaded when it changes. See `internal/config/default.yaml` for the shape:
-lists, tags (emoji + key + default list), sources (what to read per process)
+lists, tags (emoji + optional key word + default list), sources (what to read per process)
 and rules (URL/title regexps that prefill tag, title and list).
 
 ## Layout
