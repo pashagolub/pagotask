@@ -153,7 +153,7 @@ func (a *app) catalog() editor.Catalog {
 	cfg := a.config()
 	c := editor.Catalog{DefaultList: cfg.DefaultList}
 	for id, t := range cfg.Tags {
-		c.Tags = append(c.Tags, editor.TagInfo{ID: id, Emoji: t.Emoji, Key: t.Key, List: t.List})
+		c.Tags = append(c.Tags, editor.TagInfo{ID: id, Emoji: t.Emoji, Key: t.Key, Aliases: t.Aliases, List: t.List})
 	}
 	sort.Slice(c.Tags, func(i, j int) bool { return c.Tags[i].ID < c.Tags[j].ID })
 	for k, title := range cfg.Lists {

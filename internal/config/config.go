@@ -32,10 +32,11 @@ type Config struct {
 
 // Tag is one emoji template.
 type Tag struct {
-	Emoji string `yaml:"emoji"`
-	Key   string `yaml:"key,omitempty"`   // word typed first in the title line ("pr", "mail"); defaults to the tag id
-	List  string `yaml:"list,omitempty"`  // list key; empty means default_list
-	Title string `yaml:"title,omitempty"` // optional title pattern, e.g. "{who} about {what}"
+	Emoji   string   `yaml:"emoji"`
+	Key     string   `yaml:"key,omitempty"`     // word typed first in the title line ("pr", "mail"); defaults to the tag id
+	Aliases []string `yaml:"aliases,omitempty"` // more words for the same tag ("run", "swim", "hike")
+	List    string   `yaml:"list,omitempty"`    // list key; empty means default_list
+	Title   string   `yaml:"title,omitempty"`   // optional title pattern, e.g. "{who} about {what}"
 }
 
 // Source says what to read from a foreground application, keyed by process name.
@@ -145,11 +146,16 @@ func (c *Config) validate() error {
 		if !tagKeyRe.MatchString(t.Key) {
 			return fmt.Errorf("tag %q key %q must be letters, digits, - or _ without spaces", id, t.Key)
 		}
-		k := strings.ToLower(t.Key)
-		if other, dup := seenKeys[k]; dup {
-			return fmt.Errorf("tags %q and %q share key %q", other, id, t.Key)
+		for _, key := range t.Keys() {
+			if !tagKeyRe.MatchString(key) {
+				return fmt.Errorf("tag %q alias %q must be letters, digits, - or _ without spaces", id, key)
+			}
+			k := strings.ToLower(key)
+			if other, dup := seenKeys[k]; dup && other != id {
+				return fmt.Errorf("tags %q and %q share key %q", other, id, key)
+			}
+			seenKeys[k] = id
 		}
-		seenKeys[k] = id
 		if t.List != "" {
 			if _, ok := c.Lists[t.List]; !ok {
 				return fmt.Errorf("tag %q refers to unknown list %q", id, t.List)
@@ -214,11 +220,16 @@ func (r *Rule) ListFor(matched string) string {
 	return ""
 }
 
-// TagByKey finds the tag whose key is k (case-insensitive).
+// Keys returns the key followed by the aliases.
+func (t Tag) Keys() []string { return append([]string{t.Key}, t.Aliases...) }
+
+// TagByKey finds the tag whose key or alias is k (case-insensitive).
 func (c *Config) TagByKey(k string) (string, Tag, bool) {
 	for id, t := range c.Tags {
-		if strings.EqualFold(t.Key, k) {
-			return id, t, true
+		for _, key := range t.Keys() {
+			if strings.EqualFold(key, k) {
+				return id, t, true
+			}
 		}
 	}
 	return "", Tag{}, false

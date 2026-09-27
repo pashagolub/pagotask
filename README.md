@@ -9,7 +9,7 @@ yet.
 
 ## Popup keys
 
-- type `pr pgwatch #345` or `call mom`: a tag word, a space, then the title
+- type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
 - Ctrl+L list (one letter), Ctrl+T tag list filtered as you type, Ctrl+D due (`tod`, `tom`, `fri`, `+3`, `24.12`), Ctrl+N notes
 - Enter saves, Esc closes
 
