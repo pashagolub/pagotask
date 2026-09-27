@@ -10,31 +10,32 @@ lists:
   p: Personal
   c: Community
 
-# Tag id -> emoji template. `key` is the letter you type first in the title line.
+# Tag id -> emoji template. The id (or an explicit `key`) is the word you type
+# first in the title line: "pr pgwatch #345", "call mom", "mail invoice".
 tags:
-  talk:        { emoji: "🎤", key: t }
-  video:       { emoji: "🎥", key: v }
-  release:     { emoji: "🏗️", key: r, list: w }
-  home:        { emoji: "🏠", key: h, list: f }
-  family:      { emoji: "👨‍👩‍👧‍👦", key: y, list: f }
-  health:      { emoji: "💉", key: d }
-  chat:        { emoji: "💬", key: c }
-  finance:     { emoji: "💰", key: $ }
-  walking:     { emoji: "⏱️", key: k }
-  forms:       { emoji: "✅", key: o }
-  checkin:     { emoji: "✈️", key: a }
-  issue:       { emoji: "🇮🇸", key: i, list: c }
-  pr:          { emoji: "🇵🇷", key: p, list: c }
-  translation: { emoji: "🈶", key: n }
-  research:    { emoji: "🎓", key: g }
-  paperwork:   { emoji: "💼", key: b }
-  writing:     { emoji: "📝", key: e }
-  call:        { emoji: "📞", key: l }
-  mail:        { emoji: "📫", key: m }
-  auto:        { emoji: "🚐", key: u }
-  shopping:    { emoji: "🛒", key: s }
-  maintenance: { emoji: "🛠️", key: x }
-  tourism:     { emoji: "🥾", key: z }
+  talk:      { emoji: "🎤" }
+  video:     { emoji: "🎥" }
+  release:   { emoji: "🏗️", list: w }
+  home:      { emoji: "🏠", list: f }
+  family:    { emoji: "👨‍👩‍👧‍👦", list: f }
+  health:    { emoji: "💉" }
+  chat:      { emoji: "💬" }
+  finance:   { emoji: "💰" }
+  walk:      { emoji: "⏱️" }
+  forms:     { emoji: "✅" }
+  checkin:   { emoji: "✈️" }
+  is:        { emoji: "🇮🇸", list: c }
+  pr:        { emoji: "🇵🇷", list: c }
+  translate: { emoji: "🈶" }
+  research:  { emoji: "🎓" }
+  paper:     { emoji: "💼" }
+  write:     { emoji: "📝" }
+  call:      { emoji: "📞" }
+  mail:      { emoji: "📫" }
+  auto:      { emoji: "🚐" }
+  shop:      { emoji: "🛒" }
+  fix:       { emoji: "🛠️" }
+  tourism:   { emoji: "🥾" }
 
 # Process name -> what to read from that application when it is in front.
 sources:
@@ -50,7 +51,7 @@ rules:
     title: "{2} #{3}"
     list: { "cybertec-postgresql/": w }
   - match: 'github\.com/([^/]+)/([^/]+)/issues/(\d+)'
-    tag: issue
+    tag: is
     title: "{2} #{3}"
     list: { "cybertec-postgresql/": w }
 

@@ -26,7 +26,7 @@ func TestPrefill(t *testing.T) {
 
 	issue := Capture{Process: "chrome.exe", URL: "https://github.com/someone/tool/issues/7"}
 	d = Prefill(c, issue)
-	if d.Tag != "issue" || d.Title != "tool #7" || d.List != "c" {
+	if d.Tag != "is" || d.Title != "tool #7" || d.List != "c" {
 		t.Errorf("issue draft = %+v", d)
 	}
 

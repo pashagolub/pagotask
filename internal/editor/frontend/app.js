@@ -32,15 +32,22 @@
     render();
   }
 
-  // "p pgwatch #345": a known tag key followed by a space becomes the tag.
+  // "pr pgwatch #345": a known tag key followed by a space becomes the tag.
   function consumeTagKey() {
     const v = titleEl.value;
-    const m = /^(\S)\s(.*)$/s.exec(v);
+    const m = /^(\S+)\s(.*)$/s.exec(v);
     if (!m) return;
     const t = tagByKey[m[1].toLowerCase()];
     if (!t) return;
     titleEl.value = m[2];
     setTag(t.id);
+    if (pickerMode === "tag") closePicker();
+  }
+
+  // While the tag picker is open, the first word in the title filters it.
+  function filterTagPicker() {
+    const prefix = (titleEl.value.split(/\s/)[0] || "").toLowerCase();
+    for (const el of picker.children) el.classList.toggle("hidden", !el.dataset.k.startsWith(prefix));
   }
 
   function showError(msg) { errorEl.textContent = msg || ""; }
@@ -49,23 +56,27 @@
     pickerMode = mode;
     picker.innerHTML = "";
     const items = mode === "list" ? catalog.lists.map((l) => ({ k: l.key, label: l.title }))
-      : catalog.tags.map((t) => ({ k: t.key, label: t.emoji + " " + t.id }));
+      : catalog.tags.map((t) => ({ k: t.key.toLowerCase(), label: t.emoji }));
     for (const it of items) {
       const el = document.createElement("span");
       el.className = "opt";
+      el.dataset.k = it.k;
       el.innerHTML = `<span class="k">${it.k}</span><span>${it.label}</span>`;
       el.onclick = () => pick(it.k);
       picker.appendChild(el);
     }
     picker.classList.remove("hidden");
+    if (mode === "tag") { filterTagPicker(); titleEl.focus(); }
   }
 
   function closePicker() { pickerMode = null; picker.classList.add("hidden"); titleEl.focus(); }
 
   function pick(k) {
     if (pickerMode === "list" && listByKey[k]) { state.list = k; state.listChosen = true; }
-    else if (pickerMode === "tag" && tagByKey[k.toLowerCase()]) setTag(tagByKey[k.toLowerCase()].id);
-    else return;
+    else if (pickerMode === "tag" && tagByKey[k.toLowerCase()]) {
+      setTag(tagByKey[k.toLowerCase()].id);
+      titleEl.value = titleEl.value.replace(/^\S*\s?/, "");
+    } else return;
     render();
     closePicker();
   }
@@ -102,10 +113,20 @@
   }
 
   document.addEventListener("keydown", (ev) => {
-    if (pickerMode) {
+    if (pickerMode === "list") {
       if (ev.key === "Escape") { closePicker(); ev.preventDefault(); return; }
       if (ev.key.length === 1) { pick(ev.key); ev.preventDefault(); }
       return;
+    }
+    if (pickerMode === "tag") {
+      // Typing goes to the title line and filters the list; Enter picks the
+      // only remaining tag, Esc closes.
+      if (ev.key === "Escape") { closePicker(); ev.preventDefault(); return; }
+      if (ev.key === "Enter") {
+        const left = [...picker.children].filter((el) => !el.classList.contains("hidden"));
+        if (left.length === 1) { pick(left[0].dataset.k); ev.preventDefault(); return; }
+      }
+      if (ev.key !== "Enter") return;
     }
     if (ev.key === "Escape") { ev.preventDefault(); cancel(); return; }
     if (ev.key === "Enter" && !(ev.shiftKey && ev.target === notesEl)) { ev.preventDefault(); save(); return; }
@@ -117,7 +138,7 @@
       else if (k === "n") { ev.preventDefault(); notesEl.classList.toggle("hidden"); if (!notesEl.classList.contains("hidden")) notesEl.focus(); else titleEl.focus(); }
     }
   });
-  titleEl.addEventListener("input", consumeTagKey);
+  titleEl.addEventListener("input", () => { consumeTagKey(); if (pickerMode === "tag") filterTagPicker(); });
   notesEl.addEventListener("input", () => { state.notes = notesEl.value; render(); });
   $("list-chip").onclick = () => openPicker("list");
   $("due-chip").onclick = () => dueEl.focus();

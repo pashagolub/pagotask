@@ -16,8 +16,11 @@ func TestDefaultParses(t *testing.T) {
 	if len(c.Tags) != 23 {
 		t.Errorf("tags = %d, want 23", len(c.Tags))
 	}
-	if id, _, ok := c.TagByKey("p"); !ok || id != "pr" {
-		t.Errorf("TagByKey(p) = %q, %v", id, ok)
+	if id, _, ok := c.TagByKey("PR"); !ok || id != "pr" {
+		t.Errorf("TagByKey(PR) = %q, %v", id, ok)
+	}
+	if c.Tags["mail"].Key != "mail" {
+		t.Errorf("key should default to id, got %q", c.Tags["mail"].Key)
 	}
 	if got := c.Rules[0].ListFor("cybertec-postgresql/pgwatch"); got != "w" {
 		t.Errorf("ListFor = %q, want w", got)
@@ -31,8 +34,8 @@ func TestValidation(t *testing.T) {
 	cases := map[string]string{
 		"lists: {}\ndefault_list: p":                                                                          "lists must not be empty",
 		"lists: {p: Personal}\ndefault_list: x":                                                               "not in lists",
-		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: ab}}":                               "single character",
-		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: a}, b: {emoji: y, key: a}}":         "share key",
+		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: 'a b'}}":                            "without spaces",
+		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: pr}, b: {emoji: y, key: PR}}":       "share key",
 		"lists: {p: Personal}\ndefault_list: p\nrules: [{match: '(', tag: a}]":                                "unknown tag",
 		"lists: {p: Personal}\ndefault_list: p\ntags: {a: {emoji: x, key: a}}\nrules: [{match: '(', tag: a}]": "missing closing",
 		"lists: {p: Personal}\ndefault_list: p\nsources: {x.exe: {read: clipboard}}":                          "read must be",
