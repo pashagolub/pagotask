@@ -16,6 +16,7 @@ var iconICO []byte
 type Tray struct {
 	onAdd, onSignIn, onSignOut, onOpenConfig, onQuit func()
 	mAdd, mSignIn, mSignOut, mConfig, mQuit          *systray.MenuItem
+	end                                              func()
 }
 
 // NewTray returns a Tray; call Run to show it.
@@ -27,9 +28,10 @@ func (t *Tray) OnSignOut(f func())    { t.onSignOut = f }
 func (t *Tray) OnOpenConfig(f func()) { t.onOpenConfig = f }
 func (t *Tray) OnQuit(f func())       { t.onQuit = f }
 
-// Run blocks on the systray loop.
-func (t *Tray) Run(onReady func(), onExit func()) {
-	systray.Run(func() {
+// Start registers the icon with systray's external-loop mode, which is what
+// Wails' own message loop needs, and shows it.
+func (t *Tray) Start(onReady func()) {
+	start, end := systray.RunWithExternalLoop(func() {
 		systray.SetIcon(iconICO)
 		systray.SetTitle("pagotask")
 		systray.SetTooltip("pagotask")
@@ -44,7 +46,16 @@ func (t *Tray) Run(onReady func(), onExit func()) {
 		if onReady != nil {
 			onReady()
 		}
-	}, onExit)
+	}, nil)
+	t.end = end
+	start()
+}
+
+// Stop removes the icon.
+func (t *Tray) Stop() {
+	if t.end != nil {
+		t.end()
+	}
 }
 
 func (t *Tray) loop() {
@@ -60,7 +71,6 @@ func (t *Tray) loop() {
 			call(t.onOpenConfig)
 		case <-t.mQuit.ClickedCh:
 			call(t.onQuit)
-			systray.Quit()
 			return
 		}
 	}
@@ -97,6 +107,3 @@ func (t *Tray) SetSignedIn(in bool) {
 		t.mSignOut.Hide()
 	}
 }
-
-// Quit ends the tray loop.
-func (t *Tray) Quit() { systray.Quit() }
