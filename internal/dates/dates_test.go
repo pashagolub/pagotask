@@ -38,3 +38,12 @@ func TestParse(t *testing.T) {
 		t.Errorf("RFC3339 = %s", got)
 	}
 }
+
+func TestRFC3339KeepsLocalDay(t *testing.T) {
+	kyiv := time.FixedZone("UTC+3", 3*3600)
+	// Local midnight is still the previous day in UTC; the due date must not be.
+	d := time.Date(2026, 9, 27, 0, 0, 0, 0, kyiv)
+	if got := RFC3339(d); got != "2026-09-27T00:00:00Z" {
+		t.Errorf("RFC3339 = %q, want 2026-09-27T00:00:00Z", got)
+	}
+}
