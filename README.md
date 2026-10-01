@@ -11,6 +11,7 @@ yet.
 ## Popup keys
 
 - type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
+- the line under the title shows the tags that match the word you are typing (all of them while it is empty); Tab picks the first, Backspace at the start of the title removes the tag
 - Ctrl+L list (one letter), Ctrl+T tag list filtered as you type, Ctrl+D due (`tod`, `tom`, `fri`, `+3`, `24.12`), Ctrl+N notes
 - Enter saves, Esc closes
 
