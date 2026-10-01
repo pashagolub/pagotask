@@ -24,7 +24,7 @@ var iconICO []byte
 
 const (
 	winWidth  = 560
-	winHeight = 250
+	winHeight = 150 // first guess; the page resizes the window to fit
 
 	tasksWidth  = 640
 	tasksHeight = 460
@@ -123,8 +123,6 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 		Title:         "pagotask",
 		Width:         winWidth,
 		Height:        winHeight,
-		MinWidth:      winWidth,
-		MinHeight:     winHeight,
 		Frameless:     true,
 		AlwaysOnTop:   true,
 		DisableResize: true,

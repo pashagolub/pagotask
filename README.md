@@ -61,3 +61,7 @@ and rules (URL/title regexps that prefill tag, title and list).
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
   Credential Manager) and `other/` (headless stand-in)
+
+## Credits
+
+Flag emoji in the popup use the [Twemoji Country Flags](https://github.com/talkjs/country-flag-emoji-polyfill) font, with art from [Twemoji](https://github.com/twitter/twemoji) under CC-BY 4.0. See `internal/editor/frontend/fonts/`.

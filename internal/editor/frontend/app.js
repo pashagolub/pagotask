@@ -1,6 +1,6 @@
 // Popup logic. Backend calls go through the Wails v3 runtime, which the app
 // serves at /wails/runtime.js.
-import { Call, Events } from "/wails/runtime.js";
+import { Call, Events, Window } from "/wails/runtime.js";
 
 const svc = "github.com/pashagolub/pagotask/internal/editor.App.";
 const api = {
@@ -106,7 +106,8 @@ const api = {
 
   // While the tag picker is open, the first word in the title filters it.
   function filterTagPicker() {
-    const prefix = (titleEl.value.split(/\s/)[0] || "").toLowerCase();
+    // With a tag already set the title is real text, not a key: show all.
+    const prefix = state.tag ? "" : (titleEl.value.split(/\s/)[0] || "").toLowerCase();
     for (const el of picker.children) el.classList.toggle("hidden", !el.dataset.k.startsWith(prefix));
   }
 
@@ -134,8 +135,9 @@ const api = {
   function pick(k) {
     if (pickerMode === "list" && listByKey[k]) { state.list = k; state.listChosen = true; }
     else if (pickerMode === "tag" && tagByKey[k.toLowerCase()]) {
+      // Without a tag the first word was the filter text; with one it is the title.
+      if (!state.tag) titleEl.value = titleEl.value.replace(/^\S*\s?/, "");
       setTag(tagByKey[k.toLowerCase()].id);
-      titleEl.value = titleEl.value.replace(/^\S*\s?/, "");
     } else return;
     render();
     closePicker();
@@ -211,6 +213,18 @@ const api = {
   $("due-chip").onclick = () => dueEl.focus();
   $("notes-chip").onclick = () => { notesEl.classList.toggle("hidden"); notesEl.focus(); };
   emojiEl.onclick = () => openPicker("tag");
+
+  // The window follows the content: the hint line and notes change its height.
+  const popupEl = $("popup");
+  let lastHeight = 0;
+  function fitWindow() {
+    const h = Math.ceil(popupEl.getBoundingClientRect().height);
+    if (h > 0 && h !== lastHeight) {
+      lastHeight = h;
+      Window.SetSize(document.documentElement.clientWidth, h);
+    }
+  }
+  new ResizeObserver(fitWindow).observe(popupEl);
 
   async function init() {
     Events.On("draft", async (ev) => {
