@@ -49,3 +49,13 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); o
 }
 .picker .opt { display: inline-flex; gap: 6px; align-items: center; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); }
 .picker .opt .k { font-weight: 600; color: var(--accent); }
+.tag-hint {
+  display: flex; flex-wrap: wrap; gap: 4px 6px; max-height: 88px; overflow: hidden; line-height: 18px;
+  margin-left: 40px; font-size: 12px; color: var(--muted); --wails-draggable: no-drag;
+}
+.tag-hint .opt { display: inline-flex; gap: 3px; align-items: center; padding: 1px 6px; border-radius: 6px; cursor: pointer; }
+.tag-hint .opt:hover { background: var(--chip); }
+.tag-hint .opt .k { color: var(--fg); }
+.tag-hint .opt.first { border: 1px solid var(--accent); }
+.tag-hint .opt.first .k { color: var(--accent); font-weight: 600; }
+.tag-hint .opt .al { color: var(--muted); }

@@ -24,7 +24,7 @@ var iconICO []byte
 
 const (
 	winWidth  = 560
-	winHeight = 190
+	winHeight = 250
 
 	tasksWidth  = 640
 	tasksHeight = 460

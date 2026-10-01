@@ -13,6 +13,7 @@ const api = {
 (function () {
   const $ = (id) => document.getElementById(id);
   const titleEl = $("title"), emojiEl = $("emoji"), listName = $("list-name"), dueEl = $("due");
+  const hintEl = $("tag-hint");
   const notesEl = $("notes"), notesState = $("notes-state"), errorEl = $("error"), picker = $("picker");
 
   let catalog = { tags: [], lists: [], defaultList: "" };
@@ -37,6 +38,51 @@ const api = {
     const l = listByKey[state.list] || listByKey[catalog.defaultList];
     listName.textContent = l ? l.title : state.list;
     notesState.textContent = state.notes ? "notes ✓" : "no notes";
+    renderHint();
+  }
+
+  // The tag hint under the title line. With no tag yet it lists the tags
+  // whose key or alias starts with the word being typed (all of them while
+  // the title is empty); Tab or a click picks the first. Once a tag is set
+  // it just says how to change it.
+  let hintMatches = [];
+  function typedWord() {
+    const v = titleEl.value;
+    return /\s/.test(v) ? null : v.toLowerCase();
+  }
+  function renderHint() {
+    hintEl.innerHTML = "";
+    hintMatches = [];
+    const t = tagById[state.tag];
+    if (t) {
+      hintEl.textContent = `${t.emoji} ${t.key}  ·  Ctrl+T to change the tag`;
+      return;
+    }
+    const word = typedWord();
+    for (const tag of catalog.tags) {
+      const keys = [tag.key, ...(tag.aliases || [])];
+      const hit = word === null || word === "" ? tag.key : keys.find((k) => k.toLowerCase().startsWith(word));
+      if (hit) hintMatches.push({ tag, k: hit });
+    }
+    if (word && hintMatches.length === 0) {
+      hintEl.textContent = "no tag starts with that; the task is saved without a tag";
+      return;
+    }
+    hintMatches.forEach((m, i) => {
+      const el = document.createElement("span");
+      el.className = "opt" + (i === 0 && word ? " first" : "");
+      el.title = [m.tag.key, ...(m.tag.aliases || [])].join(", ");
+      el.innerHTML = `<span>${m.tag.emoji}</span><span class="k"></span>`;
+      el.querySelector(".k").textContent = m.k;
+      el.onclick = () => pickHint(m);
+      hintEl.appendChild(el);
+    });
+  }
+  function pickHint(m) {
+    // A partly typed key is replaced by the tag; a real title stays.
+    if (typedWord() !== null) titleEl.value = "";
+    setTag(m.tag.id);
+    titleEl.focus();
   }
 
   function setTag(id) {
@@ -142,6 +188,13 @@ const api = {
       }
       if (ev.key !== "Enter") return;
     }
+    if (ev.key === "Tab" && !ev.shiftKey && ev.target === titleEl && !state.tag && typedWord() && hintMatches.length) {
+      ev.preventDefault(); pickHint(hintMatches[0]); return;
+    }
+    if (ev.key === "Backspace" && ev.target === titleEl && state.tag && titleEl.selectionStart === 0 && titleEl.selectionEnd === 0) {
+      // Backspace at the start of the title removes the tag.
+      ev.preventDefault(); state.tag = ""; render(); return;
+    }
     if (ev.key === "Escape") { ev.preventDefault(); cancel(); return; }
     if (ev.key === "Enter" && !(ev.shiftKey && ev.target === notesEl)) { ev.preventDefault(); save(); return; }
     if (ev.ctrlKey && !ev.altKey) {
@@ -152,7 +205,7 @@ const api = {
       else if (k === "n") { ev.preventDefault(); notesEl.classList.toggle("hidden"); if (!notesEl.classList.contains("hidden")) notesEl.focus(); else titleEl.focus(); }
     }
   });
-  titleEl.addEventListener("input", () => { consumeTagKey(); if (pickerMode === "tag") filterTagPicker(); });
+  titleEl.addEventListener("input", () => { consumeTagKey(); if (pickerMode === "tag") filterTagPicker(); renderHint(); });
   notesEl.addEventListener("input", () => { state.notes = notesEl.value; render(); });
   $("list-chip").onclick = () => openPicker("list");
   $("due-chip").onclick = () => dueEl.focus();
