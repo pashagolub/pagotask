@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !linux
 
 // Package other is a stand-in for platforms not yet implemented. It lets
 // the app compile and run headless for development on Linux/macOS: no
