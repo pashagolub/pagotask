@@ -44,6 +44,9 @@ type app struct {
 }
 
 func main() {
+	if forward(os.Args) {
+		return // the running instance took it
+	}
 	dir, err := config.Dir()
 	if err != nil {
 		slog.Error("config dir", "err", err)

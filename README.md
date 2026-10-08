@@ -8,6 +8,15 @@ Status: first working cut. Tray, hotkey, config, Google sign-in, offline
 queue, page reader and the popup editor are in; nothing is signed or packaged
 yet.
 
+## Linux
+
+Wayland gives apps no global hotkeys, so on GNOME pagotask adds two custom
+shortcuts on start (Settings → Keyboard → Custom Shortcuts): `Super+Shift+T`
+runs `pagotask add` and `Super+Shift+D` runs `pagotask tasks`. Those commands
+wake the running instance, or start it when none runs. Changing `hotkey` or
+`tasks.hotkey` in `config.yaml` updates the shortcuts. On other desktops, bind
+the same two commands by hand.
+
 ## Popup keys
 
 - type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
@@ -90,7 +99,7 @@ sources:
 - `internal/recent` – recently used tasks for the add popup
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
-  Credential Manager) and `other/` (headless stand-in)
+  Credential Manager), `linux/` (GNOME shortcuts) and `other/` (headless stand-in)
 
 ## Credits
 
