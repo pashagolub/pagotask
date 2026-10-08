@@ -2,13 +2,15 @@
 // implementation; Windows is the first.
 package platform
 
-import "github.com/pashagolub/pagotask/internal/rules"
+import (
+	"github.com/pashagolub/pagotask/internal/config"
+	"github.com/pashagolub/pagotask/internal/rules"
+)
 
-// PageReader reads process name, window title and (for browsers) the URL of
-// the foreground window. wantURL is asked with the process name whether the
-// address bar should be read for it.
+// PageReader reads process name, window title and, as the process's source
+// says, the browser URL or one control's text from the foreground window.
 type PageReader interface {
-	Foreground(wantURL func(process string) bool) (rules.Capture, error)
+	Foreground(source func(process string) config.Source) (rules.Capture, error)
 }
 
 // Hotkey registers one global shortcut such as "Win+Shift+T".

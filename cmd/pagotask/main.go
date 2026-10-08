@@ -157,12 +157,12 @@ func (a *app) signIn() {
 // capture runs on the hotkey: read the front window, prefill and open the editor.
 func (a *app) capture() {
 	cfg := a.config()
-	cap, err := a.reader.Foreground(func(p string) bool { return cfg.Sources[p].Read == "url" })
+	cap, err := a.reader.Foreground(func(p string) config.Source { return cfg.Sources[p] })
 	if err != nil {
 		slog.Warn("capture", "err", err)
 	}
 	d := rules.Prefill(cfg, cap)
-	slog.Info("capture", "process", cap.Process, "title", cap.Title, "url", cap.URL, "draft", d)
+	slog.Info("capture", "process", cap.Process, "title", cap.Title, "url", cap.URL, "text", cap.Text, "draft", d)
 	a.editor.Open(editor.Draft{Tag: d.Tag, Title: d.Title, List: d.List, Due: "tod", Notes: d.Notes})
 }
 

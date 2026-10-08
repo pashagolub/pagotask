@@ -14,6 +14,7 @@ type Capture struct {
 	Process string // e.g. "firefox.exe"
 	Title   string // window title
 	URL     string // address bar, empty when not a browser or not readable
+	Text    string // text of the control named by a read: control source
 }
 
 // Draft is the prefilled state of the popup.
@@ -32,8 +33,12 @@ var browserSuffix = regexp.MustCompile(`\s+[-—–]\s+(Mozilla Firefox|Google C
 // draft for any other application.
 func Prefill(c *config.Config, cap Capture) Draft {
 	d := Draft{List: c.DefaultList}
-	if c.Sources[cap.Process].Read == "none" {
+	src := c.Sources[cap.Process]
+	if src.Read == "none" {
 		return d
+	}
+	if src.Read == "control" && cap.Text != "" {
+		cap.Title = cap.Text // rules and prefill use the control instead of the window title
 	}
 	for i := range c.Rules {
 		r := &c.Rules[i]
@@ -64,9 +69,12 @@ func Prefill(c *config.Config, cap Capture) Draft {
 		d.Notes = cap.URL
 		return d
 	}
-	if src, ok := c.Sources[cap.Process]; ok && src.Read == "url" {
+	switch {
+	case src.Read == "url":
 		d.Title = cleanTitle(cap.Title)
 		d.Notes = cap.URL
+	case src.Read == "control" && cap.Text != "":
+		d.Title = cap.Text
 	}
 	return d
 }

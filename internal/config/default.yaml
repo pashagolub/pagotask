@@ -42,6 +42,12 @@ tags:
 #   read: url    address bar and window title; URL and title rules apply, and
 #                with no matching rule the popup gets the page title + URL
 #   read: title  window title only; title rules apply (same as an unlisted app)
+#   read: control, control: <id or name>
+#                text of one field (e.g. a mail subject); it stands in for the
+#                window title in title rules and prefills the popup. To find a
+#                field's id, set read: control with any control value, click
+#                into the field, press the hotkey and look for "focused control"
+#                in pagotask.log.
 #   read: none   nothing; the popup opens empty
 # Process names are as in Task Manager's Details tab, e.g. brave.exe.
 sources:
