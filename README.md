@@ -1,8 +1,9 @@
 # pagotask
 
-Fast keyboard capture of Google Tasks on Windows. One tray exe, one hotkey
-(`Win+Shift+T`), a popup prefilled from the page in front of you, Enter.
-A second hotkey (`Win+Shift+D`) lists your open tasks to check them off.
+Fast keyboard capture of Google Tasks on Windows and Ubuntu. One tray app, one
+hotkey (`Win+Shift+T`, `Super+Shift+T` on Ubuntu), a popup prefilled from the
+page in front of you, Enter. A second hotkey (`Win+Shift+D`) lists your open
+tasks to check them off.
 
 Status: first working cut. Tray, hotkey, config, Google sign-in, offline
 queue, page reader and the popup editor are in; nothing is signed or packaged
@@ -12,6 +13,10 @@ The tray menu's "Run at login" starts pagotask when you sign in (Windows: the
 Run registry key; Linux: `~/.config/autostart/pagotask.desktop`).
 
 ## Linux
+
+Every CI run builds `pagotask-ubuntu-amd64`: a `.deb` for Ubuntu 24.04 and a
+plain tarball. Install with `sudo apt install ./pagotask_*.deb` and start
+pagotask from the app menu. The config lives in `~/.config/pagotask/`.
 
 Wayland gives apps no global hotkeys, so on GNOME pagotask adds two custom
 shortcuts on start (Settings → Keyboard → Custom Shortcuts): `Super+Shift+T`
