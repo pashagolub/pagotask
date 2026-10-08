@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/danieljoos/wincred v1.2.3
 	github.com/go-ole/go-ole v1.3.0
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/wailsapp/wails/v3 v3.0.0-beta.26
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sys v0.48.0
@@ -22,7 +23,6 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/google/s2a-go v0.1.10 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.22 // indirect
