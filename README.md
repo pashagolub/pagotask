@@ -12,6 +12,7 @@ yet.
 
 - type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
 - the line under the title shows the tags that match the word you are typing (all of them while it is empty); Tab picks the first, Backspace at the start of the title removes the tag
+- recent tasks (the last 20 added here or touched in Google Tasks in the past 30 days) are listed below when the popup opens empty, or after Down; typing filters them, Up/Down highlight, Enter fills tag, title and list, Enter again saves
 - Ctrl+L list (one letter), Ctrl+T tag list filtered as you type, Ctrl+D due (`tod`, `tom`, `fri`, `+3`, `24.12`), Ctrl+N notes
 - Enter saves, Esc closes
 
@@ -60,6 +61,7 @@ and rules (URL/title regexps that prefill tag, title and list).
 - `internal/editor` – popup and tray icon, one Wails v3 app on Windows (headless elsewhere); `frontend/` is plain HTML/JS
 - `internal/queue` – on-disk outbox with retries (new tasks, checks and unchecks)
 - `internal/opentasks` – local copy of open tasks and the rows the tasks popup shows
+- `internal/recent` – recently used tasks for the add popup
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
   Credential Manager) and `other/` (headless stand-in)

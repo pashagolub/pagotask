@@ -14,6 +14,7 @@ import (
 	"github.com/pashagolub/pagotask/internal/dates"
 	"github.com/pashagolub/pagotask/internal/opentasks"
 	"github.com/pashagolub/pagotask/internal/queue"
+	"github.com/pashagolub/pagotask/internal/recent"
 )
 
 // Client creates, fetches and checks off tasks, and resolves list titles to ids.
@@ -138,6 +139,44 @@ func (c *Client) OpenTasks(ctx context.Context, lists map[string]string) ([]open
 			Pages(ctx, func(p *tasks.Tasks) error {
 				for _, t := range p.Items {
 					out = append(out, openTask(key, t))
+				}
+				return nil
+			})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+// RecentTasks fetches the tasks of the given lists (key -> title) that
+// were changed since since, open or completed, for the recent list in the
+// add popup. Updated is the best Google offers: it moves on edits and
+// checks as well as on creation.
+func (c *Client) RecentTasks(ctx context.Context, lists map[string]string, since time.Time) ([]recent.Entry, error) {
+	svc, err := c.service(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var out []recent.Entry
+	for key := range lists {
+		listID, err := c.ListID(ctx, key)
+		if err != nil {
+			var perm *queue.Permanent
+			if errors.As(err, &perm) {
+				continue
+			}
+			return nil, err
+		}
+		err = svc.Tasks.List(listID).UpdatedMin(since.UTC().Format(time.RFC3339)).
+			ShowCompleted(true).ShowHidden(true).MaxResults(100).
+			Pages(ctx, func(p *tasks.Tasks) error {
+				for _, t := range p.Items {
+					if t.Title == "" || t.Deleted {
+						continue
+					}
+					used, _ := time.Parse(time.RFC3339, t.Updated)
+					out = append(out, recent.Entry{Title: t.Title, List: key, Used: used})
 				}
 				return nil
 			})

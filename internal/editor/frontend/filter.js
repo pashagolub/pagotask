@@ -30,3 +30,17 @@ export function matches(row, text, tags) {
 export function inView(row, view) {
   return view === "all" || row.when === "overdue" || row.when === "today";
 }
+
+// recentMatches picks the recent tasks for the add popup: with a tag set
+// only that tag's entries, then the typed text filtered like the
+// open-tasks list. At most limit entries, newest first.
+export function recentMatches(entries, tag, text, tags, limit) {
+  const out = [];
+  for (const e of entries || []) {
+    if (tag && e.tag !== tag) continue;
+    if (!matches({ title: e.full }, text, tags)) continue;
+    out.push(e);
+    if (out.length === limit) break;
+  }
+  return out;
+}
