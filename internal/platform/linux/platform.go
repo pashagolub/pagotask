@@ -1,8 +1,8 @@
 //go:build linux
 
 // Package linux implements the platform pieces for Linux desktops,
-// GNOME on Ubuntu first: AT-SPI page reading, GNOME custom shortcuts and
-// the "pagotask <verb>" commands they run.
+// GNOME on Ubuntu first: AT-SPI page reading, GNOME custom shortcuts,
+// the "pagotask <verb>" commands they run, and the Secret Service keyring.
 package linux
 
 import (
@@ -22,7 +22,7 @@ func New() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 		slog.Error("listen for shortcut commands", "err", err)
 	}
 	dir, _ := config.Dir()
-	return NewReader(), NewHotkey("add"), gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
+	return NewReader(), NewHotkey("add"), TokenStore{File: gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}}
 }
 
 // OpenFile opens a file with the desktop's default application.
