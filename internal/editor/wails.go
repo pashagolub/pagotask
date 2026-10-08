@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || linux
 
 package editor
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -18,9 +19,6 @@ import (
 
 //go:embed frontend
 var assets embed.FS
-
-//go:embed icon.ico
-var iconICO []byte
 
 const (
 	winWidth  = 560
@@ -111,6 +109,7 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 		Services:    []application.Service{application.NewService(&App{e: e})},
 		Assets:      application.AssetOptions{Handler: application.BundledAssetFileServer(sub)},
 		Windows:     application.WindowsOptions{DisableQuitOnLastWindowClosed: true},
+		Linux:       application.LinuxOptions{DisableQuitOnLastWindowClosed: true, ProgramName: "pagotask"},
 		OnShutdown: func() {
 			if cb.OnStop != nil {
 				cb.OnStop()
@@ -184,6 +183,9 @@ func (e *wailsEditor) Open(d Draft) {
 	e.app.Event.Emit("draft", d)
 	e.win.Center()
 	e.win.Show()
+	if runtime.GOOS == "linux" {
+		e.win.Center() // GTK knows the window's size only once it is shown
+	}
 	e.win.Focus()
 	slog.Debug("editor opened", "draft", d)
 }
@@ -201,6 +203,9 @@ func (e *wailsEditor) OpenTasks() {
 	e.app.Event.Emit("tasks-open")
 	e.tasks.Center()
 	e.tasks.Show()
+	if runtime.GOOS == "linux" {
+		e.tasks.Center()
+	}
 	e.tasks.Focus()
 }
 
@@ -252,14 +257,17 @@ func (t *tray) build(app *application.App) {
 	t.menu.Add("Quit").OnClick(func(*application.Context) { call(t.onQuit) })
 
 	t.t = app.SystemTray.New()
-	t.t.SetIcon(iconICO)
+	t.t.SetIcon(trayIcon)
 	t.t.SetTooltip("pagotask")
 	t.t.SetMenu(t.menu)
 	t.t.OnClick(func() { call(t.onAdd) })
-	t.t.OnRightClick(func() {
-		showPointer()
-		t.t.OpenMenu()
-	})
+	if runtime.GOOS == "windows" {
+		// On Linux the desktop's tray host opens the menu itself.
+		t.t.OnRightClick(func() {
+			showPointer()
+			t.t.OpenMenu()
+		})
+	}
 }
 
 func call(f func()) {
