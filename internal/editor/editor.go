@@ -33,11 +33,21 @@ type ListInfo struct {
 	Title string `json:"title"`
 }
 
+// RecentInfo is one recently used task: Full is the Google title (for
+// filtering), Tag and Title what the popup fills in.
+type RecentInfo struct {
+	Full  string `json:"full"`
+	Tag   string `json:"tag"`
+	Title string `json:"title"`
+	List  string `json:"list"`
+}
+
 // Catalog is sent to the popup on every open so config edits apply live.
 type Catalog struct {
-	Tags        []TagInfo  `json:"tags"`
-	Lists       []ListInfo `json:"lists"`
-	DefaultList string     `json:"defaultList"`
+	Tags        []TagInfo    `json:"tags"`
+	Lists       []ListInfo   `json:"lists"`
+	DefaultList string       `json:"defaultList"`
+	Recent      []RecentInfo `json:"recent"` // newest first
 }
 
 // TaskView is what the open-tasks popup renders: rows plus a status line

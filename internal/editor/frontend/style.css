@@ -67,3 +67,12 @@ html, body { margin: 0; background: var(--bg); color: var(--fg); overflow: hidde
 .tag-hint .opt.first { border: 1px solid var(--accent); }
 .tag-hint .opt.first .k { color: var(--accent); font-weight: 600; }
 .tag-hint .opt .al { color: var(--muted); }
+.recent {
+  list-style: none; margin: 0 0 0 40px; padding: 0; display: flex; flex-direction: column; gap: 1px;
+  font-size: 13px; --wails-draggable: no-drag;
+}
+.recent li { display: flex; gap: 8px; align-items: center; padding: 2px 8px; border-radius: 6px; cursor: pointer; }
+.recent li:hover { background: var(--chip); }
+.recent li.sel { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.recent .t { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.recent .l { font-size: 11px; color: var(--muted); }

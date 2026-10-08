@@ -1,6 +1,7 @@
 // Popup logic. Backend calls go through the Wails v3 runtime, which the app
 // serves at /wails/runtime.js.
 import { Call, Events, Window } from "/wails/runtime.js";
+import { tagIndex, recentMatches } from "./filter.js";
 
 const svc = "github.com/pashagolub/pagotask/internal/editor.App.";
 const api = {
@@ -13,13 +14,14 @@ const api = {
 (function () {
   const $ = (id) => document.getElementById(id);
   const titleEl = $("title"), emojiEl = $("emoji"), listName = $("list-name"), dueEl = $("due");
-  const hintEl = $("tag-hint");
+  const hintEl = $("tag-hint"), recentEl = $("recent");
   const notesEl = $("notes"), notesState = $("notes-state"), errorEl = $("error"), picker = $("picker");
 
-  let catalog = { tags: [], lists: [], defaultList: "" };
+  let catalog = { tags: [], lists: [], defaultList: "", recent: [] };
   let state = { tag: "", list: "", notes: "" };
   let tagByKey = {}, tagById = {}, listByKey = {};
   let pickerMode = null; // "list" while the list picker is open
+  let tagWords = {};
 
   const backend = () => api;
 
@@ -30,6 +32,7 @@ const api = {
       for (const k of [t.key, ...(t.aliases || [])]) tagByKey[k.toLowerCase()] = t;
     }
     for (const l of catalog.lists) listByKey[l.key] = l;
+    tagWords = tagIndex(catalog.tags);
   }
 
   function render() {
@@ -39,6 +42,46 @@ const api = {
     listName.textContent = l ? l.title : state.list;
     notesState.textContent = state.notes ? "notes ✓" : "no notes";
     renderHint();
+    renderRecent();
+  }
+
+  // Recently used tasks under the tag hint. Shown at once when the popup
+  // opens empty, otherwise after Down. Typing filters, Up/Down highlight,
+  // Enter or a click fills tag, title and list.
+  const recentLimit = 8;
+  let recentShown = false, recentSel = -1, recentRows = [];
+  function renderRecent() {
+    recentRows = recentShown ? recentMatches(catalog.recent, state.tag, titleEl.value, tagWords, recentLimit) : [];
+    if (recentSel >= recentRows.length) recentSel = recentRows.length - 1;
+    recentEl.innerHTML = "";
+    recentEl.classList.toggle("hidden", recentRows.length === 0);
+    recentRows.forEach((e, i) => {
+      const li = document.createElement("li");
+      if (i === recentSel) li.className = "sel";
+      const t = tagById[e.tag], l = listByKey[e.list];
+      li.innerHTML = `<span class="t"></span><span class="l"></span>`;
+      li.querySelector(".t").textContent = t ? `${t.emoji} ${e.title}` : e.title;
+      li.querySelector(".l").textContent = l ? l.title : e.list;
+      li.onclick = () => useRecent(e);
+      recentEl.appendChild(li);
+    });
+  }
+  function moveRecent(step) {
+    if (!recentShown) { recentShown = true; recentSel = -1; }
+    renderRecent();
+    if (recentRows.length === 0) return;
+    recentSel = Math.max(-1, Math.min(recentRows.length - 1, recentSel + step));
+    renderRecent();
+  }
+  function hideRecent() { recentShown = false; recentSel = -1; renderRecent(); }
+  function useRecent(e) {
+    titleEl.value = e.title;
+    state.tag = "";
+    setTag(e.tag);
+    if (listByKey[e.list]) { state.list = e.list; state.listChosen = true; }
+    hideRecent();
+    render();
+    titleEl.focus();
   }
 
   // The tag hint under the title line. With no tag yet it lists the tags
@@ -164,6 +207,8 @@ const api = {
   function load(d) {
     showError("");
     state = { tag: d.tag || "", list: d.list || catalog.defaultList, notes: d.notes || "", listChosen: !!d.list };
+    recentShown = !d.title && !d.tag;
+    recentSel = -1;
     titleEl.value = d.title || "";
     dueEl.value = d.due || "tod";
     notesEl.value = d.notes || "";
@@ -197,6 +242,14 @@ const api = {
       // Backspace at the start of the title removes the tag.
       ev.preventDefault(); state.tag = ""; render(); return;
     }
+    if (ev.target === titleEl && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+      ev.preventDefault(); moveRecent(ev.key === "ArrowDown" ? 1 : -1); return;
+    }
+    if (recentSel >= 0 && (ev.key === "Enter" || ev.key === "Escape")) {
+      ev.preventDefault();
+      if (ev.key === "Enter") useRecent(recentRows[recentSel]); else hideRecent();
+      return;
+    }
     if (ev.key === "Escape") { ev.preventDefault(); cancel(); return; }
     if (ev.key === "Enter" && !(ev.shiftKey && ev.target === notesEl)) { ev.preventDefault(); save(); return; }
     if (ev.ctrlKey && !ev.altKey) {
@@ -207,7 +260,10 @@ const api = {
       else if (k === "n") { ev.preventDefault(); notesEl.classList.toggle("hidden"); if (!notesEl.classList.contains("hidden")) notesEl.focus(); else titleEl.focus(); }
     }
   });
-  titleEl.addEventListener("input", () => { consumeTagKey(); if (pickerMode === "tag") filterTagPicker(); renderHint(); });
+  titleEl.addEventListener("input", () => {
+    consumeTagKey(); if (pickerMode === "tag") filterTagPicker(); renderHint();
+    recentSel = -1; renderRecent();
+  });
   notesEl.addEventListener("input", () => { state.notes = notesEl.value; render(); });
   $("list-chip").onclick = () => openPicker("list");
   $("due-chip").onclick = () => dueEl.focus();

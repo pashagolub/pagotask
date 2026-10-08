@@ -18,6 +18,7 @@ import (
 	"github.com/pashagolub/pagotask/internal/opentasks"
 	"github.com/pashagolub/pagotask/internal/platform"
 	"github.com/pashagolub/pagotask/internal/queue"
+	"github.com/pashagolub/pagotask/internal/recent"
 	"github.com/pashagolub/pagotask/internal/rules"
 )
 
@@ -33,6 +34,7 @@ type app struct {
 	client *gtasks.Client
 	queue  *queue.Queue
 	store  *opentasks.Store
+	recent *recent.Store
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -72,7 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 	a := &app{cfg: cfg, reader: reader, hotkey: hk, tasksK: newHotkey(), tray: tray, editor: ed, auth: auth, queue: q,
-		store: opentasks.Open(filepath.Join(dir, "tasks.json")), refreshNow: make(chan struct{}, 1)}
+		store: opentasks.Open(filepath.Join(dir, "tasks.json")), recent: recent.Open(filepath.Join(dir, "recent.json")), refreshNow: make(chan struct{}, 1)}
 	a.client = gtasks.NewClient(auth, func() map[string]string { return a.config().Lists })
 	q.OnIdle = func(pending, stuck int) {
 		tray.SetPending(pending, stuck)
@@ -181,6 +183,9 @@ func (a *app) save(d editor.Draft) error {
 	if err := a.queue.Put(queue.Item{ListKey: d.List, Title: title, Notes: d.Notes, Due: due}); err != nil {
 		return err
 	}
+	if err := a.recent.Add(title, d.List, time.Now()); err != nil {
+		slog.Warn("save recent", "err", err)
+	}
 	a.editor.TasksChanged() // it shows in the open-tasks popup at once
 	return nil
 }
@@ -267,7 +272,17 @@ func (a *app) refresh() {
 	a.note = note
 	a.noteMu.Unlock()
 	a.editor.TasksChanged()
+
+	used, err := a.client.RecentTasks(a.ctx, a.config().Lists, started.Add(-recentWindow))
+	if err != nil {
+		slog.Warn("refresh recent tasks", "err", err)
+	} else if err := a.recent.SetGoogle(used); err != nil {
+		slog.Warn("save recent tasks", "err", err)
+	}
 }
+
+// recentWindow is how far back Google tasks count as recently used.
+const recentWindow = 30 * 24 * time.Hour
 
 func (a *app) catalog() editor.Catalog {
 	cfg := a.config()
@@ -280,6 +295,13 @@ func (a *app) catalog() editor.Catalog {
 		c.Lists = append(c.Lists, editor.ListInfo{Key: k, Title: title})
 	}
 	sort.Slice(c.Lists, func(i, j int) bool { return c.Lists[i].Title < c.Lists[j].Title })
+	for _, e := range a.recent.List() {
+		if _, ok := cfg.Lists[e.List]; !ok {
+			continue // a list since removed from config
+		}
+		d := rules.SplitTitle(cfg, e.Title)
+		c.Recent = append(c.Recent, editor.RecentInfo{Full: e.Title, Tag: d.Tag, Title: d.Title, List: e.List})
+	}
 	return c
 }
 

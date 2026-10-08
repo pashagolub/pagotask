@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/pashagolub/pagotask/internal/config"
@@ -54,5 +55,30 @@ func TestPrefill(t *testing.T) {
 	d = Prefill(c, other)
 	if d.Tag != "" || d.Title != "" || d.Notes != "" {
 		t.Errorf("other draft = %+v", d)
+	}
+}
+
+func TestSplitTitle(t *testing.T) {
+	c, err := config.Parse(config.Default)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pr := FullTitle(c, Draft{Tag: "pr", Title: "pgwatch #345"})
+	for _, tc := range []struct{ in, tag, text string }{
+		{pr, "pr", "pgwatch #345"},
+		{"plain title", "", "plain title"},
+	} {
+		d := SplitTitle(c, tc.in)
+		if d.Tag != tc.tag || d.Title != tc.text {
+			t.Errorf("SplitTitle(%q) = %+v, want %q %q", tc.in, d, tc.tag, tc.text)
+		}
+	}
+	// Every tag round-trips, with or without the variation selector.
+	for id, tag := range c.Tags {
+		full := FullTitle(c, Draft{Tag: id, Title: "x"})
+		d := SplitTitle(c, strings.ReplaceAll(full, "️", ""))
+		if d.Title != "x" || c.Tags[d.Tag].Emoji != tag.Emoji {
+			t.Errorf("tag %s: SplitTitle(%q) = %+v", id, full, d)
+		}
 	}
 }

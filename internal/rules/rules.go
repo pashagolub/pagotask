@@ -91,3 +91,27 @@ func FullTitle(c *config.Config, d Draft) string {
 	}
 	return strings.TrimSpace(d.Title)
 }
+
+// SplitTitle is FullTitle in reverse: a title that starts with a tag's
+// emoji gives that tag and the text after it. Emoji variation selectors do
+// not matter; with no matching emoji the tag is empty and the text is the
+// whole title.
+func SplitTitle(c *config.Config, title string) Draft {
+	title = strings.TrimSpace(title)
+	bare := strings.ReplaceAll(title, "️", "")
+	best, bestLen := "", 0
+	for id, t := range c.Tags {
+		e := strings.ReplaceAll(t.Emoji, "️", "")
+		if e == "" || !strings.HasPrefix(bare, e) {
+			continue
+		}
+		// The longest emoji wins (a flag over its first letter); ties go to the lower id.
+		if len(e) > bestLen || len(e) == bestLen && id < best {
+			best, bestLen = id, len(e)
+		}
+	}
+	if best == "" {
+		return Draft{Title: title}
+	}
+	return Draft{Tag: best, Title: strings.TrimSpace(bare[bestLen:])}
+}
