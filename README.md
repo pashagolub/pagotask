@@ -52,6 +52,15 @@ reloaded when it changes. See `internal/config/default.yaml` for the shape:
 lists, tags (emoji + optional key word + default list), sources (what to read per process)
 and rules (URL/title regexps that prefill tag, title and list).
 
+`sources` maps a process name (as in Task Manager's Details tab) to what is read
+from that app when the hotkey is pressed:
+
+| `read`  | What is read                 | Effect                                                                  |
+|---------|------------------------------|-------------------------------------------------------------------------|
+| `url`   | address bar and window title | URL and title rules; no match prefills page title + URL in notes        |
+| `title` | window title only            | title rules only (also what happens for apps not listed)                |
+| `none`  | nothing                      | the popup opens empty                                                   |
+
 ## Layout
 
 - `cmd/pagotask` – wiring

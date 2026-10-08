@@ -56,6 +56,13 @@ func TestPrefill(t *testing.T) {
 	if d.Tag != "" || d.Title != "" || d.Notes != "" {
 		t.Errorf("other draft = %+v", d)
 	}
+
+	// read: none skips rules even when the title would match one.
+	c.Sources["Thunderbird.exe"] = config.Source{Read: "none"}
+	d = Prefill(c, Capture{Process: "Thunderbird.exe", Title: noURL.Title})
+	if d.Tag != "" || d.Title != "" || d.List != c.DefaultList {
+		t.Errorf("read none draft = %+v", d)
+	}
 }
 
 func TestSplitTitle(t *testing.T) {

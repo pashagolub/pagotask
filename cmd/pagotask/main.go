@@ -157,7 +157,7 @@ func (a *app) signIn() {
 // capture runs on the hotkey: read the front window, prefill and open the editor.
 func (a *app) capture() {
 	cfg := a.config()
-	cap, err := a.reader.Foreground(wantsURL(cfg))
+	cap, err := a.reader.Foreground(func(p string) bool { return cfg.Sources[p].Read == "url" })
 	if err != nil {
 		slog.Warn("capture", "err", err)
 	}
@@ -303,15 +303,6 @@ func (a *app) catalog() editor.Catalog {
 		c.Recent = append(c.Recent, editor.RecentInfo{Full: e.Title, Tag: d.Tag, Title: d.Title, List: e.List})
 	}
 	return c
-}
-
-func wantsURL(cfg *config.Config) bool {
-	for _, s := range cfg.Sources {
-		if s.Read == "url" {
-			return true
-		}
-	}
-	return false
 }
 
 // watchConfig reloads config.yaml when it changes (polling; cheap and portable).

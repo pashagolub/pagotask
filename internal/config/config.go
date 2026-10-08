@@ -64,8 +64,13 @@ func (c *Config) TaskLists() map[string]string {
 }
 
 // Source says what to read from a foreground application, keyed by process name.
+//
+//	url   - address bar and window title; URL and title rules apply, and with
+//	        no matching rule the popup is prefilled with the page title and URL
+//	title - window title only; title rules apply (same as an unlisted app)
+//	none  - nothing; the popup opens empty
 type Source struct {
-	Read string `yaml:"read"` // "url", "title" or "none"
+	Read string `yaml:"read"`
 }
 
 // Rule turns a captured URL or title into a prefilled task.

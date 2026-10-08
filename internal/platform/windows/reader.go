@@ -19,13 +19,13 @@ type Reader struct{}
 func NewReader() *Reader { return &Reader{} }
 
 // Foreground implements platform.PageReader.
-func (Reader) Foreground(wantURL bool) (rules.Capture, error) {
+func (Reader) Foreground(wantURL func(process string) bool) (rules.Capture, error) {
 	hwnd, _, _ := procGetForegroundWindow.Call()
 	if hwnd == 0 {
 		return rules.Capture{}, nil
 	}
 	cap := rules.Capture{Title: windowTitle(hwnd), Process: processName(hwnd)}
-	if wantURL {
+	if wantURL(cap.Process) {
 		cap.URL = browserURL(hwnd)
 	}
 	return cap, nil
