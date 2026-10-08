@@ -253,6 +253,7 @@ func (t *tray) build(app *application.App) {
 	t.mSignIn = t.menu.Add("Sign in to Google").OnClick(func(*application.Context) { call(t.onSignIn) })
 	t.mSignOut = t.menu.Add("Sign out").OnClick(func(*application.Context) { call(t.onSignOut) })
 	t.menu.Add("Open config.yaml").OnClick(func(*application.Context) { call(t.onOpenConfig) })
+	t.addRunAtLogin(app)
 	t.menu.AddSeparator()
 	t.menu.Add("Quit").OnClick(func(*application.Context) { call(t.onQuit) })
 
@@ -268,6 +269,27 @@ func (t *tray) build(app *application.App) {
 			t.t.OpenMenu()
 		})
 	}
+}
+
+// addRunAtLogin adds a checkbox that registers pagotask to start at login
+// (Windows: the Run registry key; Linux: ~/.config/autostart).
+func (t *tray) addRunAtLogin(app *application.App) {
+	on, err := app.Autostart.IsEnabled()
+	if err != nil {
+		slog.Warn("run at login", "err", err)
+	}
+	item := t.menu.AddCheckbox("Run at login", on)
+	item.OnClick(func(*application.Context) {
+		want := item.Checked() // already flipped by the click
+		err := app.Autostart.Disable()
+		if want {
+			err = app.Autostart.Enable()
+		}
+		if err != nil {
+			slog.Error("run at login", "on", want, "err", err)
+			item.SetChecked(!want)
+		}
+	})
 }
 
 func call(f func()) {
