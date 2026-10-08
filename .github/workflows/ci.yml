@@ -29,11 +29,15 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -tags production \
             -ldflags "-H windowsgui $creds" -o dist/pagotask.exe ./cmd/pagotask
           go build -tags production -ldflags "-s -w $creds" -o dist/linux/pagotask ./cmd/pagotask
+      - name: Package for Ubuntu
+        run: |
+          version=0.0.0~git$(date -u +%Y%m%d).$(git rev-parse --short HEAD)
+          packaging/linux/build.sh dist/linux/pagotask "$version" dist/ubuntu
       - uses: actions/upload-artifact@v4
         with:
           name: pagotask-windows-amd64
           path: dist/pagotask.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: pagotask-linux-amd64
-          path: dist/linux/pagotask
+          name: pagotask-ubuntu-amd64
+          path: dist/ubuntu/*

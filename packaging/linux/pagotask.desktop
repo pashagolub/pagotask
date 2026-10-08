@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=pagotask
+Comment=Quick capture for Google Tasks
+Exec=pagotask
+Icon=pagotask
+Terminal=false
+Categories=Utility;
+StartupWMClass=pagotask
