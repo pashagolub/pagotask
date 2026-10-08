@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/sys/windows"
 
+	"github.com/pashagolub/pagotask/internal/config"
 	"github.com/pashagolub/pagotask/internal/rules"
 )
 
@@ -19,14 +20,17 @@ type Reader struct{}
 func NewReader() *Reader { return &Reader{} }
 
 // Foreground implements platform.PageReader.
-func (Reader) Foreground(wantURL func(process string) bool) (rules.Capture, error) {
+func (Reader) Foreground(source func(process string) config.Source) (rules.Capture, error) {
 	hwnd, _, _ := procGetForegroundWindow.Call()
 	if hwnd == 0 {
 		return rules.Capture{}, nil
 	}
 	cap := rules.Capture{Title: windowTitle(hwnd), Process: processName(hwnd)}
-	if wantURL(cap.Process) {
+	switch src := source(cap.Process); src.Read {
+	case "url":
 		cap.URL = browserURL(hwnd)
+	case "control":
+		cap.Text = controlText(hwnd, src.Control)
 	}
 	return cap, nil
 }

@@ -11,10 +11,11 @@ import (
 	"github.com/go-ole/go-ole"
 )
 
-// UI Automation is used to read the address bar of the focused browser
-// without touching the clipboard. Only the handful of COM calls needed are
-// bound here: CUIAutomation.ElementFromHandle, CreatePropertyCondition,
-// IUIAutomationElement.FindAll and the ValuePattern's CurrentValue.
+// UI Automation is used to read the address bar of the focused browser, or
+// one named control of another app, without touching the clipboard. Only the
+// handful of COM calls needed are bound here: CUIAutomation.ElementFromHandle,
+// GetFocusedElement, CreatePropertyCondition, IUIAutomationElement.FindFirst,
+// FindAll, CurrentName, CurrentAutomationId and the ValuePattern's CurrentValue.
 
 var (
 	clsidCUIAutomation       = ole.NewGUID("{ff48dba4-60ef-4201-aa87-54103eef594e}")
@@ -28,16 +29,20 @@ const (
 	uiaValuePatternID    = 10002
 	uiaEditControlType   = 50004
 	uiaAutomationIDProp  = 30011
+	uiaNameProp          = 30005
 	firefoxURLBarID      = "urlbar-input"
 )
 
 // vtable slots (0-based) of the interfaces we call; IUnknown occupies 0-2.
 const (
 	slotElementFromHandle       = 6  // IUIAutomation
+	slotGetFocusedElement       = 8  // IUIAutomation
 	slotCreatePropertyCondition = 23 // IUIAutomation
 	slotFindFirst               = 5  // IUIAutomationElement
 	slotFindAll                 = 6  // IUIAutomationElement
 	slotGetCurrentPattern       = 16 // IUIAutomationElement
+	slotCurrentName             = 23 // IUIAutomationElement
+	slotCurrentAutomationID     = 29 // IUIAutomationElement
 	slotValueCurrentValue       = 4  // IUIAutomationValuePattern
 	slotArrayLength             = 3  // IUIAutomationElementArray
 	slotArrayGetElement         = 4  // IUIAutomationElementArray
@@ -58,16 +63,13 @@ func vcall(obj *ole.IUnknown, slot int, args ...uintptr) (uintptr, error) {
 	return r, nil
 }
 
-// browserURL returns the URL shown in the address bar of hwnd, or "".
-// It looks at every edit control of the window and takes the first whose
-// value looks like an address: web pages have edit controls of their own
-// (GitHub's search box, comment fields), so the first edit found is not
-// necessarily the address bar.
-func browserURL(hwnd uintptr) (url string) {
+// withUIA runs fn with a UI Automation instance and the element of hwnd,
+// on one locked OS thread with COM initialised. It returns "" on any failure.
+func withUIA(hwnd uintptr, fn func(auto, root *ole.IUnknown) string) (out string) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Warn("uia: panic reading address bar", "err", r)
-			url = ""
+			slog.Warn("uia: panic", "err", r)
+			out = ""
 		}
 	}()
 	// COM state belongs to the OS thread; keep this goroutine on one.
@@ -98,7 +100,19 @@ func browserURL(hwnd uintptr) (url string) {
 		return ""
 	}
 	defer root.Release()
+	return fn(auto, root)
+}
 
+// browserURL returns the URL shown in the address bar of hwnd, or "".
+// It looks at every edit control of the window and takes the first whose
+// value looks like an address: web pages have edit controls of their own
+// (GitHub's search box, comment fields), so the first edit found is not
+// necessarily the address bar.
+func browserURL(hwnd uintptr) string {
+	return withUIA(hwnd, findURL)
+}
+
+func findURL(auto, root *ole.IUnknown) string {
 	// Fast path: Firefox names its address bar, so one lookup finds it
 	// without walking the whole page.
 	if u, ok := asURL(firstValue(auto, root, uiaAutomationIDProp, firefoxURLBarID)); ok {
@@ -141,19 +155,75 @@ func browserURL(hwnd uintptr) (url string) {
 	return ""
 }
 
-// firstValue returns the value of the first descendant whose string
-// property prop equals want, or "".
-func firstValue(auto, root *ole.IUnknown, prop uintptr, want string) string {
+// controlText returns the text of the first control of hwnd whose
+// AutomationId, or else Name, is want: its value when it has one (edit
+// fields), else its name (labels). The focused control is logged either way
+// so the id of a field can be found by clicking into it and pressing the hotkey.
+func controlText(hwnd uintptr, want string) string {
+	return withUIA(hwnd, func(auto, root *ole.IUnknown) string {
+		logFocused(auto)
+		if el := findFirst(auto, root, uiaAutomationIDProp, want); el != nil {
+			defer el.Release()
+			if v := editValue(el); v != "" {
+				return v
+			}
+			return elementString(el, slotCurrentName)
+		}
+		if el := findFirst(auto, root, uiaNameProp, want); el != nil {
+			defer el.Release()
+			return editValue(el)
+		}
+		slog.Warn("uia: no control with this id or name", "control", want)
+		return ""
+	})
+}
+
+// logFocused logs the id, name and value of the focused control.
+func logFocused(auto *ole.IUnknown) {
+	var el *ole.IUnknown
+	if _, err := vcall(auto, slotGetFocusedElement, uintptr(unsafe.Pointer(&el))); err != nil || el == nil {
+		return
+	}
+	defer el.Release()
+	slog.Info("uia: focused control",
+		"id", elementString(el, slotCurrentAutomationID),
+		"name", elementString(el, slotCurrentName),
+		"value", editValue(el))
+}
+
+// elementString reads a BSTR property getter of an element, or "".
+func elementString(el *ole.IUnknown, slot int) string {
+	var bstr *uint16
+	if _, err := vcall(el, slot, uintptr(unsafe.Pointer(&bstr))); err != nil || bstr == nil {
+		return ""
+	}
+	defer ole.SysFreeString((*int16)(unsafe.Pointer(bstr)))
+	return ole.BstrToString(bstr)
+}
+
+// findFirst returns the first descendant whose string property prop equals
+// want, or nil. The caller releases it.
+func findFirst(auto, root *ole.IUnknown, prop uintptr, want string) *ole.IUnknown {
 	bstr := ole.SysAllocString(want)
 	defer ole.SysFreeString(bstr)
 	v := ole.NewVariant(ole.VT_BSTR, int64(uintptr(unsafe.Pointer(bstr))))
 	var cond *ole.IUnknown
 	if _, err := vcall(auto, slotCreatePropertyCondition, prop, uintptr(unsafe.Pointer(&v)), uintptr(unsafe.Pointer(&cond))); err != nil || cond == nil {
-		return ""
+		return nil
 	}
 	defer cond.Release()
 	var el *ole.IUnknown
 	if _, err := vcall(root, slotFindFirst, treeScopeDescendants, uintptr(unsafe.Pointer(cond)), uintptr(unsafe.Pointer(&el))); err != nil || el == nil {
+		return nil
+	}
+	return el
+}
+
+// firstValue returns the value of the first descendant whose string
+// property prop equals want, or "".
+func firstValue(auto, root *ole.IUnknown, prop uintptr, want string) string {
+	el := findFirst(auto, root, prop, want)
+	if el == nil {
 		return ""
 	}
 	defer el.Release()

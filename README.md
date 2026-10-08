@@ -59,7 +59,17 @@ from that app when the hotkey is pressed:
 |---------|------------------------------|-------------------------------------------------------------------------|
 | `url`   | address bar and window title | URL and title rules; no match prefills page title + URL in notes        |
 | `title` | window title only            | title rules only (also what happens for apps not listed)                |
+| `control` | text of the control named by `control:` | stands in for the window title in title rules; prefills the popup title |
 | `none`  | nothing                      | the popup opens empty                                                   |
+
+`control:` is the field's UI Automation id, or else its name. To find it, add the app with
+`read: control` and any `control:` value, click into the field, press the hotkey and look for
+the `focused control` line in `%APPDATA%\pagotask\pagotask.log`:
+
+```yaml
+sources:
+  MailClient.exe: { read: control, control: subject }
+```
 
 ## Layout
 

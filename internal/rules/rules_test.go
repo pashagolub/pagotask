@@ -63,6 +63,21 @@ func TestPrefill(t *testing.T) {
 	if d.Tag != "" || d.Title != "" || d.List != c.DefaultList {
 		t.Errorf("read none draft = %+v", d)
 	}
+
+	// read: control: the control's text stands in for the window title.
+	c.Sources["MailClient.exe"] = config.Source{Read: "control", Control: "subject"}
+	d = Prefill(c, Capture{Process: "MailClient.exe", Title: "Inbox - MailClient", Text: "Quarterly report"})
+	if d.Tag != "" || d.Title != "Quarterly report" || d.Notes != "" {
+		t.Errorf("read control draft = %+v", d)
+	}
+	d = Prefill(c, Capture{Process: "MailClient.exe", Title: "Inbox - MailClient", Text: noURL.Title})
+	if d.Tag != "pr" || d.Title != "pagotask #6" {
+		t.Errorf("read control rule draft = %+v", d)
+	}
+	d = Prefill(c, Capture{Process: "MailClient.exe", Title: "Inbox - MailClient"})
+	if d.Title != "" {
+		t.Errorf("read control, control not found: draft = %+v", d)
+	}
 }
 
 func TestSplitTitle(t *testing.T) {

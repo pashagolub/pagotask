@@ -68,9 +68,12 @@ func (c *Config) TaskLists() map[string]string {
 //	url   - address bar and window title; URL and title rules apply, and with
 //	        no matching rule the popup is prefilled with the page title and URL
 //	title - window title only; title rules apply (same as an unlisted app)
+//	control - the text of the control whose UI Automation id or name is
+//	        Control; it stands in for the window title in rules and prefill
 //	none  - nothing; the popup opens empty
 type Source struct {
-	Read string `yaml:"read"`
+	Read    string `yaml:"read"`
+	Control string `yaml:"control,omitempty"` // with read: control
 }
 
 // Rule turns a captured URL or title into a prefilled task.
@@ -208,8 +211,12 @@ func (c *Config) validate() error {
 	for name, s := range c.Sources {
 		switch s.Read {
 		case "url", "title", "none":
+		case "control":
+			if s.Control == "" {
+				return fmt.Errorf("source %q: read: control needs control: <id or name>", name)
+			}
 		default:
-			return fmt.Errorf("source %q: read must be url, title or none", name)
+			return fmt.Errorf("source %q: read must be url, title, control or none", name)
 		}
 	}
 	for i := range c.Rules {
