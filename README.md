@@ -6,8 +6,8 @@ page in front of you, Enter. A second hotkey (`Win+Shift+D`) lists your open
 tasks to check them off.
 
 Status: first working cut. Tray, hotkey, config, Google sign-in, offline
-queue, page reader and the popup editor are in; nothing is signed or packaged
-yet.
+queue, page reader and the popup editor are in. Nothing is signed; Ubuntu gets
+a .deb from CI, Windows a plain exe.
 
 The tray menu's "Run at login" starts pagotask when you sign in (Windows: the
 Run registry key; Linux: `~/.config/autostart/pagotask.desktop`).
