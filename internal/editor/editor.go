@@ -1,7 +1,8 @@
 // Package editor is the capture popup (one title line, list and due chips,
-// optional notes) and the open-tasks popup (check tasks off). The Windows build renders it with Wails v3 (WebView2),
-// which also owns the tray icon; other platforms get a headless stand-in
-// until they have a window backend.
+// optional notes) and the open-tasks popup (check tasks off). Windows and
+// Linux render it with Wails v3 (WebView2, WebKitGTK), which also owns the
+// tray icon; other platforms get a headless stand-in until they have a
+// window backend.
 package editor
 
 import (

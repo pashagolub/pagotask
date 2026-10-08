@@ -7,15 +7,17 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Install GTK and WebKitGTK headers
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
       - run: go vet ./...
       - run: go test ./...
-      - name: Cross-compile for Windows
+      - name: Build for Windows and Linux
         # The Google OAuth desktop client is baked in from repository secrets
         # when they are set; without them sign-in falls back to config.yaml.
         env:
@@ -23,10 +25,15 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
           pkg=github.com/pashagolub/pagotask/internal/gtasks
+          creds="-X $pkg.DefaultClientID=$GOOGLE_CLIENT_ID -X $pkg.DefaultClientSecret=$GOOGLE_CLIENT_SECRET"
           GOOS=windows GOARCH=amd64 go build -tags production \
-            -ldflags "-H windowsgui -X $pkg.DefaultClientID=$GOOGLE_CLIENT_ID -X $pkg.DefaultClientSecret=$GOOGLE_CLIENT_SECRET" \
-            -o dist/pagotask.exe ./cmd/pagotask
+            -ldflags "-H windowsgui $creds" -o dist/pagotask.exe ./cmd/pagotask
+          go build -tags production -ldflags "-s -w $creds" -o dist/linux/pagotask ./cmd/pagotask
       - uses: actions/upload-artifact@v4
         with:
           name: pagotask-windows-amd64
           path: dist/pagotask.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pagotask-linux-amd64
+          path: dist/linux/pagotask

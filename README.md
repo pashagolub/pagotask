@@ -34,8 +34,15 @@ interval.
 go build -tags production -ldflags "-H windowsgui" -o pagotask.exe ./cmd/pagotask
 ```
 
-The popup is a [Wails](https://wails.io) v2 window (WebView2, preinstalled on
+The popup is a [Wails](https://wails.io) v3 window (WebView2, preinstalled on
 Windows 10/11). Plain `go build` is enough; the Wails CLI is not needed.
+
+On Linux the popup runs on GTK 4 and WebKitGTK, so building needs their headers
+(Ubuntu 24.04: `sudo apt install libgtk-4-dev libwebkitgtk-6.0-dev`):
+
+```
+go build -tags production -o pagotask ./cmd/pagotask
+```
 
 Sign-in needs a Google OAuth desktop client. Either bake one in:
 
@@ -77,7 +84,7 @@ sources:
 - `internal/config` – YAML config and validation
 - `internal/rules` – capture → prefilled draft
 - `internal/dates` – `tod`, `tom`, `mon`, `+3` …
-- `internal/editor` – popup and tray icon, one Wails v3 app on Windows (headless elsewhere); `frontend/` is plain HTML/JS
+- `internal/editor` – popup and tray icon, one Wails v3 app on Windows and Linux (headless elsewhere); `frontend/` is plain HTML/JS
 - `internal/queue` – on-disk outbox with retries (new tasks, checks and unchecks)
 - `internal/opentasks` – local copy of open tasks and the rows the tasks popup shows
 - `internal/recent` – recently used tasks for the add popup
