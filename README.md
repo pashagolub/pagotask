@@ -17,6 +17,15 @@ wake the running instance, or start it when none runs. Changing `hotkey` or
 `tasks.hotkey` in `config.yaml` updates the shortcuts. On other desktops, bind
 the same two commands by hand.
 
+The window in front is read through AT-SPI (the Linux accessibility bus), which
+works on Wayland. pagotask switches desktop accessibility on at start; browsers
+already running pick that up after a restart. Firefox then publishes the page
+address. Chrome does so only when started with `--force-renderer-accessibility`;
+without it Chrome pages get the window title, so title rules still apply. For X11
+and XWayland windows the X server also supplies the process and title (needs
+`xprop`, from `x11-utils`). Process names in `sources` are the program's file
+name: `firefox`, `chrome`, `code`.
+
 ## Popup keys
 
 - type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
@@ -99,7 +108,7 @@ sources:
 - `internal/recent` – recently used tasks for the add popup
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
-  Credential Manager), `linux/` (GNOME shortcuts) and `other/` (headless stand-in)
+  Credential Manager), `linux/` (AT-SPI, GNOME shortcuts) and `other/` (headless stand-in)
 
 ## Credits
 

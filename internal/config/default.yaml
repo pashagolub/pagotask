@@ -49,12 +49,18 @@ tags:
 #                into the field, press the hotkey and look for "focused control"
 #                in pagotask.log.
 #   read: none   nothing; the popup opens empty
-# Process names are as in Task Manager's Details tab, e.g. brave.exe.
+# Process names are as in Task Manager's Details tab, e.g. brave.exe. On
+# Linux they are the program's file name, e.g. firefox, chrome, code.
 sources:
   firefox.exe: { read: url }
   chrome.exe:  { read: url }
   msedge.exe:  { read: url }
   Code.exe:    { read: title }
+  firefox:     { read: url }
+  chrome:      { read: url }
+  chromium:    { read: url }
+  msedge:      { read: url }
+  code:        { read: title }
 
 # First matching rule wins. {1}, {2}... are regexp capture groups.
 rules:

@@ -1,8 +1,8 @@
 //go:build linux
 
 // Package linux implements the platform pieces for Linux desktops,
-// GNOME on Ubuntu first: GNOME custom shortcuts and the "pagotask <verb>"
-// commands they run.
+// GNOME on Ubuntu first: AT-SPI page reading, GNOME custom shortcuts and
+// the "pagotask <verb>" commands they run.
 package linux
 
 import (
@@ -13,7 +13,6 @@ import (
 	"github.com/pashagolub/pagotask/internal/config"
 	"github.com/pashagolub/pagotask/internal/gtasks"
 	"github.com/pashagolub/pagotask/internal/platform"
-	"github.com/pashagolub/pagotask/internal/rules"
 )
 
 // New returns the Linux implementations and starts listening for
@@ -23,14 +22,7 @@ func New() (platform.PageReader, platform.Hotkey, gtasks.TokenStore) {
 		slog.Error("listen for shortcut commands", "err", err)
 	}
 	dir, _ := config.Dir()
-	return reader{}, NewHotkey("add"), gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
-}
-
-// reader reads nothing yet; the popup opens empty.
-type reader struct{}
-
-func (reader) Foreground(func(string) config.Source) (rules.Capture, error) {
-	return rules.Capture{}, nil
+	return NewReader(), NewHotkey("add"), gtasks.FileTokenStore{Path: filepath.Join(dir, "token.json")}
 }
 
 // OpenFile opens a file with the desktop's default application.
