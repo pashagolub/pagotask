@@ -31,8 +31,8 @@ var (
 // Scope is the only Google permission v1 asks for.
 const Scope = tasks.TasksScope
 
-// TokenStore persists the OAuth token. The Windows build uses Credential
-// Manager; other platforms fall back to a file in the config directory.
+// TokenStore persists the OAuth token. Windows uses Credential Manager,
+// Linux the desktop keyring; other platforms a file in the config directory.
 type TokenStore interface {
 	Load() (*oauth2.Token, error)
 	Save(*oauth2.Token) error

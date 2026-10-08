@@ -7,6 +7,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/wailsapp/wails/v3 v3.0.0-beta.26
+	github.com/zalando/go-keyring v0.2.6
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sys v0.48.0
 	google.golang.org/api v0.299.0
@@ -14,6 +15,7 @@ require (
 )
 
 require (
+	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	cloud.google.com/go/auth v0.23.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.1 // indirect

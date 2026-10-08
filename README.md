@@ -26,6 +26,9 @@ and XWayland windows the X server also supplies the process and title (needs
 `xprop`, from `x11-utils`). Process names in `sources` are the program's file
 name: `firefox`, `chrome`, `code`.
 
+The Google sign-in token is kept in the desktop keyring (GNOME Keyring). Without
+a keyring it goes to `~/.config/pagotask/token.json`, readable only by you.
+
 ## Popup keys
 
 - type `pr pgwatch #345` or `call mom`: a tag word (or one of its aliases), a space, then the title
@@ -108,7 +111,7 @@ sources:
 - `internal/recent` – recently used tasks for the add popup
 - `internal/gtasks` – OAuth desktop flow and Tasks API
 - `internal/platform` – OS interfaces; `windows/` (Win32, UI Automation,
-  Credential Manager), `linux/` (AT-SPI, GNOME shortcuts) and `other/` (headless stand-in)
+  Credential Manager), `linux/` (AT-SPI, GNOME shortcuts, keyring) and `other/` (headless stand-in)
 
 ## Credits
 
