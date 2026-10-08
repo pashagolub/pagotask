@@ -8,6 +8,9 @@ Status: first working cut. Tray, hotkey, config, Google sign-in, offline
 queue, page reader and the popup editor are in; nothing is signed or packaged
 yet.
 
+The tray menu's "Run at login" starts pagotask when you sign in (Windows: the
+Run registry key; Linux: `~/.config/autostart/pagotask.desktop`).
+
 ## Linux
 
 Wayland gives apps no global hotkeys, so on GNOME pagotask adds two custom
