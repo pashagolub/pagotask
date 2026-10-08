@@ -32,6 +32,9 @@ var browserSuffix = regexp.MustCompile(`\s+[-—–]\s+(Mozilla Firefox|Google C
 // draft for any other application.
 func Prefill(c *config.Config, cap Capture) Draft {
 	d := Draft{List: c.DefaultList}
+	if c.Sources[cap.Process].Read == "none" {
+		return d
+	}
 	for i := range c.Rules {
 		r := &c.Rules[i]
 		subject := cap.URL

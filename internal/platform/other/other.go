@@ -18,7 +18,7 @@ import (
 
 type reader struct{}
 
-func (reader) Foreground(bool) (rules.Capture, error) { return rules.Capture{}, nil }
+func (reader) Foreground(func(string) bool) (rules.Capture, error) { return rules.Capture{}, nil }
 
 type hotkey struct{}
 

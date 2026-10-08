@@ -39,6 +39,11 @@ tags:
   tourism:   { emoji: "🥾" }
 
 # Process name -> what to read from that application when it is in front.
+#   read: url    address bar and window title; URL and title rules apply, and
+#                with no matching rule the popup gets the page title + URL
+#   read: title  window title only; title rules apply (same as an unlisted app)
+#   read: none   nothing; the popup opens empty
+# Process names are as in Task Manager's Details tab, e.g. brave.exe.
 sources:
   firefox.exe: { read: url }
   chrome.exe:  { read: url }

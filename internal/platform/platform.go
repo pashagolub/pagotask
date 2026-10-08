@@ -5,9 +5,10 @@ package platform
 import "github.com/pashagolub/pagotask/internal/rules"
 
 // PageReader reads process name, window title and (for browsers) the URL of
-// the foreground window. wantURL says whether the caller needs the URL at all.
+// the foreground window. wantURL is asked with the process name whether the
+// address bar should be read for it.
 type PageReader interface {
-	Foreground(wantURL bool) (rules.Capture, error)
+	Foreground(wantURL func(process string) bool) (rules.Capture, error)
 }
 
 // Hotkey registers one global shortcut such as "Win+Shift+T".
