@@ -92,12 +92,12 @@ func (a *App) OpenLink(url string) string {
 	if err := a.e.app.Browser.OpenURL(url); err != nil {
 		return err.Error()
 	}
-	a.e.tasks.Hide()
+	a.e.hideTasks()
 	return ""
 }
 
 // CloseTasks is called on Esc in the tasks popup.
-func (a *App) CloseTasks() { a.e.tasks.Hide() }
+func (a *App) CloseTasks() { a.e.hideTasks() }
 
 func (e *wailsEditor) Run(cb Callbacks) error {
 	e.cb = cb
@@ -157,7 +157,7 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 			return
 		}
 		ev.Cancel()
-		e.tasks.Hide()
+		e.hideTasks()
 	})
 
 	e.tray.build(e.app)
@@ -219,6 +219,7 @@ func (e *wailsEditor) hide() {
 	e.mu.Unlock()
 	if e.win != nil {
 		e.win.Hide()
+		application.InvokeAsync(showPointer)
 	}
 }
 
@@ -255,7 +256,10 @@ func (t *tray) build(app *application.App) {
 	t.t.SetTooltip("pagotask")
 	t.t.SetMenu(t.menu)
 	t.t.OnClick(func() { call(t.onAdd) })
-	t.t.OnRightClick(func() { t.t.OpenMenu() })
+	t.t.OnRightClick(func() {
+		showPointer()
+		t.t.OpenMenu()
+	})
 }
 
 func call(f func()) {
@@ -305,4 +309,9 @@ func (t *tray) SetSignedIn(in bool) {
 		t.mSignIn.SetHidden(in)
 		t.mSignOut.SetHidden(!in)
 	})
+}
+
+func (e *wailsEditor) hideTasks() {
+	e.tasks.Hide()
+	application.InvokeAsync(showPointer)
 }
