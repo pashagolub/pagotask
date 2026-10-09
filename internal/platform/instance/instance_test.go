@@ -1,6 +1,4 @@
-//go:build linux
-
-package linux
+package instance
 
 import (
 	"path/filepath"
@@ -17,7 +15,7 @@ func TestVerbReachesHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := make(chan string, 2)
-	handle("add", func() { got <- "add" })
+	Handle("add", func() { got <- "add" })
 	if err := send(path, "add"); err != nil {
 		t.Fatal(err)
 	}
@@ -34,11 +32,11 @@ func TestVerbReachesHandler(t *testing.T) {
 func TestPendingVerbRunsOnRegister(t *testing.T) {
 	run("tasks")
 	got := make(chan bool, 1)
-	handle("tasks", func() { got <- true })
+	Handle("tasks", func() { got <- true })
 	select {
 	case <-got:
 	case <-time.After(2 * time.Second):
 		t.Fatal("pending verb not run")
 	}
-	handle("tasks", nil)
+	Handle("tasks", nil)
 }
