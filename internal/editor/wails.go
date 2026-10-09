@@ -39,12 +39,18 @@ type wailsEditor struct {
 
 	mu       sync.Mutex
 	started  bool
-	quitting atomic.Bool // closing windows really closes them
-	current  *Draft      // the draft on screen, for a page that loads after Open
+	ready    map[*application.WebviewWindow]bool // page loaded; safe to show
+	pending  map[*application.WebviewWindow]bool // shown before it was ready
+	quitting atomic.Bool                         // closing windows really closes them
+	current  *Draft                              // the draft on screen, for a page that loads after Open
 }
 
 // New returns the Wails-backed editor.
-func New() Editor { return &wailsEditor{tray: &tray{}} }
+func New() Editor {
+	return &wailsEditor{tray: &tray{},
+		ready:   map[*application.WebviewWindow]bool{},
+		pending: map[*application.WebviewWindow]bool{}}
+}
 
 func (e *wailsEditor) Tray() platform.Tray { return e.tray }
 
@@ -159,6 +165,19 @@ func (e *wailsEditor) Run(cb Callbacks) error {
 		e.hideTasks()
 	})
 
+	for _, w := range []*application.WebviewWindow{e.win, e.tasks} {
+		w.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+			e.mu.Lock()
+			e.ready[w] = true
+			due := e.pending[w]
+			delete(e.pending, w)
+			e.mu.Unlock()
+			if due {
+				present(w)
+			}
+		})
+	}
+
 	e.tray.build(e.app)
 
 	e.app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
@@ -181,12 +200,7 @@ func (e *wailsEditor) Open(d Draft) {
 		return // the page asks for Current once it loads
 	}
 	e.app.Event.Emit("draft", d)
-	e.win.Center()
-	e.win.Show()
-	if runtime.GOOS == "linux" {
-		e.win.Center() // GTK knows the window's size only once it is shown
-	}
-	e.win.Focus()
+	e.show(e.win)
 	slog.Debug("editor opened", "draft", d)
 }
 
@@ -201,12 +215,30 @@ func (e *wailsEditor) OpenTasks() {
 		go e.cb.OnTasksOpen()
 	}
 	e.app.Event.Emit("tasks-open")
-	e.tasks.Center()
-	e.tasks.Show()
-	if runtime.GOOS == "linux" {
-		e.tasks.Center()
+	e.show(e.tasks)
+}
+
+// show brings w up, or, when its page has not loaded yet (a "pagotask add"
+// that started the app), as soon as it has: showing a window before then
+// creates it hidden.
+func (e *wailsEditor) show(w *application.WebviewWindow) {
+	e.mu.Lock()
+	if !e.ready[w] {
+		e.pending[w] = true
+		e.mu.Unlock()
+		return
 	}
-	e.tasks.Focus()
+	e.mu.Unlock()
+	present(w)
+}
+
+func present(w *application.WebviewWindow) {
+	w.Center()
+	w.Show()
+	if runtime.GOOS == "linux" {
+		w.Center() // GTK knows the window's size only once it is shown
+	}
+	w.Focus()
 }
 
 func (e *wailsEditor) TasksChanged() {

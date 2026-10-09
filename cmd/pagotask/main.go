@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/pashagolub/pagotask/internal/gtasks"
 	"github.com/pashagolub/pagotask/internal/opentasks"
 	"github.com/pashagolub/pagotask/internal/platform"
+	"github.com/pashagolub/pagotask/internal/platform/instance"
 	"github.com/pashagolub/pagotask/internal/queue"
 	"github.com/pashagolub/pagotask/internal/recent"
 	"github.com/pashagolub/pagotask/internal/rules"
@@ -55,6 +57,10 @@ func main() {
 	logFile, err := os.OpenFile(filepath.Join(dir, "pagotask.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err == nil {
 		slog.SetDefault(slog.New(slog.NewTextHandler(logFile, nil)))
+	}
+
+	if err := instance.Listen(); err != nil {
+		slog.Error("listen for pagotask add/tasks", "err", err)
 	}
 
 	cfg, err := config.Load()
@@ -115,12 +121,10 @@ func main() {
 		OnTasksOpen: a.refreshSoon,
 		OnStart: func() {
 			tray.Start(func() { tray.SetSignedIn(auth.SignedIn()) })
-			if err := hk.Register(cfg.Hotkey, a.capture); err != nil {
-				slog.Error("hotkey", "err", err)
-			}
-			if err := a.tasksK.Register(cfg.Tasks.Hotkey, a.editor.OpenTasks); err != nil {
-				slog.Error("tasks hotkey", "err", err)
-			}
+			instance.Handle("add", a.capture)
+			instance.Handle("tasks", a.editor.OpenTasks)
+			grab(hk, cfg.Hotkey, a.capture, "hotkey")
+			grab(a.tasksK, cfg.Tasks.Hotkey, a.editor.OpenTasks, "tasks hotkey")
 			go q.Run(a.ctx, a.client)
 			go a.watchConfig()
 			go a.refreshLoop()
@@ -128,6 +132,8 @@ func main() {
 		},
 		OnStop: func() {
 			a.cancel()
+			instance.Handle("add", nil)
+			instance.Handle("tasks", nil)
 			_ = hk.Unregister()
 			_ = a.tasksK.Unregister()
 			tray.Stop()
@@ -136,6 +142,35 @@ func main() {
 	if err != nil {
 		slog.Error("editor", "err", err)
 		os.Exit(1)
+	}
+}
+
+// forward handles "pagotask [add|tasks]". When an instance is already
+// running it gets the verb and this process exits; otherwise this process
+// starts and does the verb itself once it is up. Desktop shortcuts (GNOME,
+// PowerToys, AutoHotkey...) run these commands.
+func forward(args []string) bool {
+	verb := ""
+	if len(args) > 1 {
+		verb = args[1]
+	}
+	switch verb {
+	case "", "add", "tasks":
+	default:
+		fmt.Fprintln(os.Stderr, "usage: pagotask [add|tasks]")
+		os.Exit(2)
+	}
+	return instance.Forward(verb)
+}
+
+// grab registers pagotask's own global hotkey; "none" leaves the key to a
+// desktop shortcut that runs "pagotask add" or "pagotask tasks".
+func grab(hk platform.Hotkey, combo string, fn func(), what string) {
+	if strings.EqualFold(combo, "none") {
+		return
+	}
+	if err := hk.Register(combo, fn); err != nil {
+		slog.Error(what, "err", err)
 	}
 }
 
@@ -337,15 +372,11 @@ func (a *app) watchConfig() {
 			}
 			if cfg.Hotkey != a.config().Hotkey {
 				_ = a.hotkey.Unregister()
-				if err := a.hotkey.Register(cfg.Hotkey, a.capture); err != nil {
-					slog.Error("hotkey", "err", err)
-				}
+				grab(a.hotkey, cfg.Hotkey, a.capture, "hotkey")
 			}
 			if cfg.Tasks.Hotkey != a.config().Tasks.Hotkey {
 				_ = a.tasksK.Unregister()
-				if err := a.tasksK.Register(cfg.Tasks.Hotkey, a.editor.OpenTasks); err != nil {
-					slog.Error("tasks hotkey", "err", err)
-				}
+				grab(a.tasksK, cfg.Tasks.Hotkey, a.editor.OpenTasks, "tasks hotkey")
 			}
 			a.mu.Lock()
 			a.cfg = cfg

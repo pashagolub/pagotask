@@ -1,5 +1,8 @@
 # pagotask configuration. Edited by hand; changes apply live.
 
+# "none" leaves the key to a shortcut of your own (PowerToys, AutoHotkey, a
+# desktop shortcut) that runs "pagotask add"; tasks.hotkey likewise with
+# "pagotask tasks". The commands also work alongside pagotask's own hotkeys.
 hotkey: Win+Shift+T
 default_list: p
 

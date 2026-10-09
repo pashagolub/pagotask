@@ -12,6 +12,15 @@ a .deb from CI, Windows a plain exe.
 The tray menu's "Run at login" starts pagotask when you sign in (Windows: the
 Run registry key; Linux: `~/.config/autostart/pagotask.desktop`).
 
+## Commands
+
+`pagotask add` opens the add popup and `pagotask tasks` the open-tasks popup.
+If pagotask is running they wake it; if not, they start it. So any launcher
+can stand in for the built-in hotkeys, e.g. a PowerToys Keyboard Manager
+shortcut that runs `pagotask.exe add`. Set `hotkey: none` (and
+`tasks.hotkey: none`) in `config.yaml` to leave the keys to it. A plain second
+`pagotask` start just exits: there is only ever one instance.
+
 ## Linux
 
 Every CI run builds `pagotask-ubuntu-amd64`: a `.deb` for Ubuntu 24.04 and a

@@ -14,16 +14,16 @@ import (
 
 // Hotkey is a GNOME custom shortcut that runs "pagotask <verb>". Wayland
 // gives apps no global key grabs, so the desktop owns the key and the
-// command wakes the running instance (see ipc.go). The shortcut outlives
-// the app on purpose: pressing it with pagotask closed starts it.
+// command wakes the running instance (see package instance). The shortcut
+// outlives the app on purpose: pressing it with pagotask closed starts it.
 type Hotkey struct{ verb string }
 
 // NewHotkey returns the shortcut for verb ("add" or "tasks").
 func NewHotkey(verb string) *Hotkey { return &Hotkey{verb: verb} }
 
-// Register implements platform.Hotkey.
+// Register implements platform.Hotkey. fn is not called from here: the
+// command reaches it through the instance package.
 func (h *Hotkey) Register(combo string, fn func()) error {
-	handle(h.verb, fn)
 	c, err := platform.ParseCombo(combo)
 	if err != nil {
 		return err
@@ -38,11 +38,8 @@ func (h *Hotkey) Register(combo string, fn func()) error {
 	return setShortcut(h.verb, accel(c), quoteArg(exe)+" "+h.verb)
 }
 
-// Unregister implements platform.Hotkey. It only drops the handler.
-func (h *Hotkey) Unregister() error {
-	handle(h.verb, nil)
-	return nil
-}
+// Unregister implements platform.Hotkey. It leaves the shortcut in place.
+func (h *Hotkey) Unregister() error { return nil }
 
 func gnome() bool {
 	d := strings.ToLower(os.Getenv("XDG_CURRENT_DESKTOP"))

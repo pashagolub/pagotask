@@ -1,6 +1,9 @@
-//go:build linux
-
-package linux
+// Package instance keeps pagotask single-instance and lets "pagotask add"
+// and "pagotask tasks" reach the running instance. Desktop shortcuts
+// (GNOME, PowerToys, AutoHotkey...) run those commands; the command passes
+// its verb over a Unix socket and exits. With no instance running it starts
+// one, which then does the verb.
+package instance
 
 import (
 	"bufio"
@@ -14,21 +17,23 @@ import (
 	"time"
 )
 
-// The desktop shortcuts run "pagotask add" or "pagotask tasks". That
-// command passes its verb to the running instance over a Unix socket and
-// exits; with no instance running it starts one, which then does the verb.
-
 var (
 	handlersMu sync.Mutex
 	handlers   = map[string]func(){}
 	pending    = map[string]bool{} // verbs that arrived before their handler
 )
 
-// SocketPath is where the running instance listens.
+// SocketPath is where the running instance listens: XDG_RUNTIME_DIR on
+// Linux, the user's local cache directory elsewhere (%LOCALAPPDATA% on
+// Windows, which has Unix sockets since Windows 10 1803).
 func SocketPath() string {
 	dir := os.Getenv("XDG_RUNTIME_DIR")
 	if dir == "" {
-		dir = filepath.Join(os.TempDir(), fmt.Sprintf("pagotask-%d", os.Getuid()))
+		base, err := os.UserCacheDir()
+		if err != nil {
+			base = os.TempDir()
+		}
+		dir = filepath.Join(base, "pagotask")
 		_ = os.MkdirAll(dir, 0o700)
 	}
 	return filepath.Join(dir, "pagotask.sock")
@@ -54,6 +59,7 @@ func send(path, verb string) error {
 	if err != nil {
 		return err
 	}
+	allowForeground() // this process holds the user's key press; pass it on
 	defer c.Close()
 	_ = c.SetDeadline(time.Now().Add(2 * time.Second))
 	if _, err := fmt.Fprintln(c, verb); err != nil {
@@ -69,7 +75,9 @@ func send(path, verb string) error {
 	return nil
 }
 
-// listen serves verbs from later "pagotask <verb>" runs.
+// Listen serves verbs from later "pagotask <verb>" runs.
+func Listen() error { return listen(SocketPath()) }
+
 func listen(path string) error {
 	_ = os.Remove(path) // stale: Forward found nobody listening
 	l, err := net.Listen("unix", path)
@@ -116,7 +124,9 @@ func run(verb string) {
 	}
 }
 
-func handle(verb string, fn func()) {
+// Handle sets the function a verb runs; nil removes it. A verb that
+// arrived before its handler runs as soon as one is set.
+func Handle(verb string, fn func()) {
 	handlersMu.Lock()
 	if fn == nil {
 		delete(handlers, verb)
